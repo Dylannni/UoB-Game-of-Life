@@ -75,6 +75,7 @@ func distributor(p Params, c distributorChannels) {
 		select {
 		case <-ticker.C:
 			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+		default:
 		}
 	}
 
