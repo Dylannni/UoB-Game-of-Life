@@ -1,5 +1,7 @@
 package gol
 
+import "uk.ac.bris.cs/gameoflife/util"
+
 // Params provides the details of how to run the Game of Life and which image to load.
 type Params struct {
 	Turns       int
@@ -17,6 +19,7 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	ioFilename := make(chan string)
 	ioOutput := make(chan uint8)
 	ioInput := make(chan uint8)
+	AliveCellsCount := make(chan []util.Cell)
 
 	completedTurns := 0
 
@@ -30,13 +33,15 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	go startIo(p, ioChannels)
 
 	distributorChannels := distributorChannels{
-		events:         events,
-		ioCommand:      ioCommand,
-		ioIdle:         ioIdle,
-		ioFilename:     ioFilename,
-		ioOutput:       ioOutput,
-		ioInput:        ioInput,
-		completedTurns: completedTurns,
+		events:          events,
+		ioCommand:       ioCommand,
+		ioIdle:          ioIdle,
+		ioFilename:      ioFilename,
+		ioOutput:        ioOutput,
+		ioInput:         ioInput,
+		completedTurns:  completedTurns,
+		keyPresses:      keyPresses,
+		AliveCellsCount: AliveCellsCount,
 	}
 	distributor(p, distributorChannels)
 }
