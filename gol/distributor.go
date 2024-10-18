@@ -14,12 +14,27 @@ type distributorChannels struct {
 	ioOutput       chan<- uint8
 	ioInput        <-chan uint8
 	completedTurns int
+	keyPresses     <-chan rune
 }
 
 func worker(startY, endY, startX, endX int, p Params, immutableWorld func(y, x int) byte, c distributorChannels, tempWorld chan<- [][]byte) {
 	//func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
 	worldPart := calculateNextState(startY, endY, startX, endX, p, immutableWorld, c)
 	tempWorld <- worldPart
+}
+
+// send the world into output
+func outputImage(c distributorChannels, p Params, world [][]byte) {
+	c.ioCommand <- ioOutput
+	filename := strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
+	c.ioFilename <- filename
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			c.ioOutput <- world[y][x]
+		}
+	}
+	c.events <- ImageOutputComplete{c.completedTurns, filename}
+
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -75,19 +90,45 @@ func distributor(p Params, c distributorChannels) {
 		select {
 		case <-ticker.C:
 			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
-		default:
+		case key := <-c.keyPresses:
+			switch key {
+			case 's':
+				outputImage(c, p, world)
+				c.events <- StateChange{turn, Executing}
+			case 'q':
+				outputImage(c, p, world)
+				close(c.events)
+				return
+			case 'p':
+				c.events <- StateChange{turn, Paused}
+				pause := true
+
+				for pause {
+					select {
+					case key := <-c.keyPresses:
+						switch key {
+						case 'p':
+							c.events <- StateChange{turn, Executing}
+							pause = false
+						case 's':
+							outputImage(c, p, world)
+						case 'q':
+							outputImage(c, p, world)
+
+							c.events <- StateChange{turn, Quitting}
+							close(c.events)
+							return
+						}
+					case <-ticker.C:
+						c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+					}
+				}
+			}
 		}
+
 	}
 
-	c.ioCommand <- ioOutput
-	filename := strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
-	c.ioFilename <- filename
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
-			c.ioOutput <- world[y][x]
-		}
-	}
-	c.events <- ImageOutputComplete{c.completedTurns, filename}
+	outputImage(c, p, world)
 
 	// TODO: Report the final state using FinalTurnCompleteEvent.
 	c.events <- FinalTurnComplete{CompletedTurns: p.Turns, Alive: calculateAliveCells(p, world)}
