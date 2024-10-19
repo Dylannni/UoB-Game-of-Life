@@ -11,17 +11,6 @@ func initWorld(height, width int) [][]byte {
 	return world
 }
 
-// create immutable world for worker, prevent race condition
-func makeImmutableWorld(world [][]byte) func(y, x int) byte {
-	//	Anonymous function that takes two parameters: y and x (coordinates).
-	//	Accesses the value at world[y][x] without modifying it. (read-only)
-	//	Usage:
-	//		immutableWorld := makeImmutableWorld(world)
-	//		value := immutableWorld(1, 1) // Accesses world[1][1]
-	return func(y, x int) byte {
-		return world[y][x]
-	}
-}
 
 func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 	var aliveCells []util.Cell
@@ -38,7 +27,7 @@ func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 	return aliveCells
 }
 
-func countLiveNeighbors(world func(y, x int) byte, row, col, rows, cols int) int {
+func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	neighbors := [8][2]int{
 		{-1, -1}, {-1, 0}, {-1, 1}, // Top-left, Top, Top-right
 		{0, -1}, {0, 1}, // Left, Right
@@ -50,15 +39,15 @@ func countLiveNeighbors(world func(y, x int) byte, row, col, rows, cols int) int
 		newRow := (row + n[0] + rows) % rows
 		newCol := (col + n[1] + cols) % cols
 		// 调用 world 函数来获取细胞状态
-		if world(newRow, newCol) == 255 {
+		if world[newRow][newCol] == 255 {
 			liveNeighbors++
 		}
 	}
 	return liveNeighbors
 }
 
-// func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels) [][]byte {
-func calculateNextState(startY, endY, startX, endX int, p Params, world func(y, x int) byte, c distributorChannels) [][]byte {
+func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels) [][]byte {
+	// func calculateNextState(startY, endY, startX, endX int, p Params, world func(y, x int) byte, c distributorChannels) [][]byte {
 
 	height := endY - startY
 	width := endX - startX
@@ -77,7 +66,7 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world func(y, 
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(world, globalRow, globalCol, p.ImageHeight, p.ImageWidth)
 			// Apply the Game of Life rules
-			if world(globalRow, globalCol) == 255 {
+			if world[globalRow][globalCol] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					newWorld[row][col] = 0 // Cell dies
@@ -90,7 +79,6 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world func(y, 
 				if liveNeighbors == 3 {
 					newWorld[row][col] = 255 // Cell becomes alive
 					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalRow, Y: globalCol}}
-
 				} else {
 					newWorld[row][col] = 0 // Cell stays dead
 				}

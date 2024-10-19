@@ -16,9 +16,9 @@ type distributorChannels struct {
 	completedTurns int
 }
 
-func worker(startY, endY, startX, endX int, p Params, immutableWorld func(y, x int) byte, c distributorChannels, tempWorld chan<- [][]byte) {
-	//func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
-	worldPart := calculateNextState(startY, endY, startX, endX, p, immutableWorld, c)
+// func worker(startY, endY, startX, endX int, p Params, immutableWorld func(y, x int) byte, c distributorChannels, tempWorld chan<- [][]byte) {
+func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
+	worldPart := calculateNextState(startY, endY, startX, endX, p, world, c)
 	tempWorld <- worldPart
 }
 
@@ -44,10 +44,10 @@ func distributor(p Params, c distributorChannels) {
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		immutableWorld := makeImmutableWorld(world)
+		// immutableWorld := makeImmutableWorld(world)
 
 		if p.Threads == 1 {
-			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, immutableWorld, c)
+			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, world, c)
 		} else {
 			tempWorld := make([]chan [][]byte, p.Threads)
 			for i := range tempWorld {
@@ -57,9 +57,9 @@ func distributor(p Params, c distributorChannels) {
 			heightPerThread := p.ImageHeight / p.Threads
 
 			for i := 0; i < p.Threads-1; i++ {
-				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, immutableWorld, c, tempWorld[i])
+				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, world, c, tempWorld[i])
 			}
-			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, immutableWorld, c, tempWorld[p.Threads-1])
+			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, world, c, tempWorld[p.Threads-1])
 
 			mergeWorld := initWorld(0, 0)
 			for i := 0; i < p.Threads; i++ {
