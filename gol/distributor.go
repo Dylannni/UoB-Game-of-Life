@@ -9,14 +9,14 @@ import (
 )
 
 type distributorChannels struct {
-	events          chan<- Event
-	ioCommand       chan<- ioCommand
-	ioIdle          <-chan bool
-	ioFilename      chan<- string
-	ioOutput        chan<- uint8
-	ioInput         <-chan uint8
-	completedTurns  int
-	keyPresses      <-chan rune
+	events         chan<- Event
+	ioCommand      chan<- ioCommand
+	ioIdle         <-chan bool
+	ioFilename     chan<- string
+	ioOutput       chan<- uint8
+	ioInput        <-chan uint8
+	completedTurns int
+	keyPresses     <-chan rune
 }
 
 func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
@@ -94,6 +94,7 @@ func distributor(p Params, c distributorChannels) {
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		select {
+		// ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
 			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 		case key := <-c.keyPresses:
@@ -132,7 +133,7 @@ func distributor(p Params, c distributorChannels) {
 					}
 				}
 			}
-			default:
+		default:
 		}
 
 	}
