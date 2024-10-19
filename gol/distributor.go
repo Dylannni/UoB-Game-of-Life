@@ -4,21 +4,41 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"uk.ac.bris.cs/gameoflife/util"
 )
 
 type distributorChannels struct {
-	events         chan<- Event
-	ioCommand      chan<- ioCommand
-	ioIdle         <-chan bool
-	ioFilename     chan<- string
-	ioOutput       chan<- uint8
-	ioInput        <-chan uint8
-	completedTurns int
+	events          chan<- Event
+	ioCommand       chan<- ioCommand
+	ioIdle          <-chan bool
+	ioFilename      chan<- string
+	ioOutput        chan<- uint8
+	ioInput         <-chan uint8
+	completedTurns  int
+	keyPresses      <-chan rune
+	AliveCellsCount chan<- []util.Cell
 }
 
 func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
 	worldPart := calculateNextState(startY, endY, startX, endX, p, world, c)
 	tempWorld <- worldPart
+}
+
+// send the world into output
+func outputImage(c distributorChannels, p Params, world [][]byte) {
+	c.ioCommand <- ioOutput
+	filename := strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
+	c.ioFilename <- filename
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			c.ioOutput <- world[y][x]
+		}
+	}
+	c.ioCommand <- ioCheckIdle
+	<-c.ioIdle
+	c.events <- ImageOutputComplete{c.completedTurns, filename}
+
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
@@ -31,10 +51,14 @@ func distributor(p Params, c distributorChannels) {
 
 	c.ioCommand <- ioInput
 	c.ioFilename <- strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth)}, "x")
-
+	// add value to the input
 	for y := 0; y < p.ImageHeight; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
 			world[y][x] = <-c.ioInput
+			val := world[y][x]
+			if val == 255 {
+				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+			}
 		}
 	}
 
@@ -73,19 +97,48 @@ func distributor(p Params, c distributorChannels) {
 		select {
 		case <-ticker.C:
 			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
-		default:
+		case key := <-c.keyPresses:
+			switch key {
+			case 's':
+				outputImage(c, p, world)
+				c.events <- StateChange{turn, Executing}
+			case 'q':
+				outputImage(c, p, world)
+				c.ioCommand <- ioCheckIdle
+				<-c.ioIdle
+				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+				c.events <- StateChange{turn, Quitting}
+				close(c.events)
+				return
+			case 'p':
+				c.events <- StateChange{turn, Paused}
+				pause := true
+
+				for pause {
+					key := <-c.keyPresses
+					switch key {
+					case 'p':
+						c.events <- StateChange{turn, Executing}
+						pause = false
+					case 's':
+						outputImage(c, p, world)
+					case 'q':
+						outputImage(c, p, world)
+						c.ioCommand <- ioCheckIdle
+						<-c.ioIdle
+						c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+						c.events <- StateChange{turn, Quitting}
+						close(c.events)
+						return
+					}
+				}
+			}
+			//default:
 		}
+
 	}
 
-	c.ioCommand <- ioOutput
-	filename := strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
-	c.ioFilename <- filename
-	for y := 0; y < p.ImageHeight; y++ {
-		for x := 0; x < p.ImageWidth; x++ {
-			c.ioOutput <- world[y][x]
-		}
-	}
-	c.events <- ImageOutputComplete{c.completedTurns, filename}
+	outputImage(c, p, world)
 
 	// TODO: Report the final state using FinalTurnCompleteEvent.
 	c.events <- FinalTurnComplete{CompletedTurns: p.Turns, Alive: calculateAliveCells(p, world)}
