@@ -27,6 +27,13 @@ func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 	return aliveCells
 }
 
+// countLiveNeighbors calculates the number of live neighbors for a given cell.
+// Parameters:
+//   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
+//   - row, col: The row and column of the current cell to calculate neighbors for.
+//   - rows, cols: The total number of rows and columns in the world, used for boundary handling.
+// Returns:
+//   - The number of live neighboring cells.
 func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	neighbors := [8][2]int{
 		{-1, -1}, {-1, 0}, {-1, 1}, // Top-left, Top, Top-right
@@ -36,9 +43,16 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 
 	liveNeighbors := 0
 	for _, n := range neighbors {
+		// Ensures the world wraps around at the edges (i.e. torus-like world)
 		newRow := (row + n[0] + rows) % rows
 		newCol := (col + n[1] + cols) % cols
-		// 调用 world 函数来获取细胞状态
+
+		// Example: At a 5x5 world, if the current cell is at (0,0) and the neighbor is {-1, -1} (Top-left),
+		// the newRow and newCol would be calculated as:
+		// newRow = (0 + (-1) + 5) % 5 = 4  (wraps around to the bottom row)
+		// newCol = (0 + (-1) + 5) % 5 = 4  (wraps around to the rightmost column)
+		// So, the Top-left neighbor of (0, 0) would be (4, 4), wrapping around from the bottom-right.
+
 		if world[newRow][newCol] == 255 {
 			liveNeighbors++
 		}
@@ -47,8 +61,6 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 }
 
 func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels) [][]byte {
-	// func calculateNextState(startY, endY, startX, endX int, p Params, world func(y, x int) byte, c distributorChannels) [][]byte {
-
 	height := endY - startY
 	width := endX - startX
 

@@ -16,7 +16,6 @@ type distributorChannels struct {
 	completedTurns int
 }
 
-// func worker(startY, endY, startX, endX int, p Params, immutableWorld func(y, x int) byte, c distributorChannels, tempWorld chan<- [][]byte) {
 func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
 	worldPart := calculateNextState(startY, endY, startX, endX, p, world, c)
 	tempWorld <- worldPart
@@ -44,7 +43,6 @@ func distributor(p Params, c distributorChannels) {
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		// immutableWorld := makeImmutableWorld(world)
 
 		if p.Threads == 1 {
 			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, world, c)
