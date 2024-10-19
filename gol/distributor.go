@@ -17,7 +17,6 @@ type distributorChannels struct {
 	ioInput         <-chan uint8
 	completedTurns  int
 	keyPresses      <-chan rune
-	AliveCellsCount chan<- []util.Cell
 }
 
 func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
@@ -100,8 +99,8 @@ func distributor(p Params, c distributorChannels) {
 		case key := <-c.keyPresses:
 			switch key {
 			case 's':
+				c.events <- StateChange{c.completedTurns, Executing}
 				outputImage(c, p, world)
-				c.events <- StateChange{turn, Executing}
 			case 'q':
 				outputImage(c, p, world)
 				c.ioCommand <- ioCheckIdle
@@ -133,7 +132,7 @@ func distributor(p Params, c distributorChannels) {
 					}
 				}
 			}
-			//default:
+			default:
 		}
 
 	}
