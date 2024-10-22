@@ -11,7 +11,6 @@ func initWorld(height, width int) [][]byte {
 	return world
 }
 
-
 func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 	var aliveCells []util.Cell
 
@@ -30,8 +29,9 @@ func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
 //   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
-//   - row, col: The row and column of the current cell to calculate neighbors for.
-//   - rows, cols: The total number of rows and columns in the world, used for boundary handling.
+//   - row(globalY), col(globalX): The row and column of the current cell to calculate neighbors for.
+//   - rows(p.ImageHeight), cols(p.ImageWidth): The total number of rows and columns in the world, used for boundary handling.
+//
 // Returns:
 //   - The number of live neighboring cells.
 func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
@@ -70,29 +70,29 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 	}
 
 	// Iterate over each cell in the world
-	for row := 0; row < height; row++ {
-		for col := 0; col < width; col++ {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 
-			globalRow := startY + row
-			globalCol := startX + col
+			globalY := startY + y
+			globalX := startX + x
 			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(world, globalRow, globalCol, p.ImageHeight, p.ImageWidth)
+			liveNeighbors := countLiveNeighbors(world, globalY, globalX, p.ImageHeight, p.ImageWidth)
 			// Apply the Game of Life rules
-			if world[globalRow][globalCol] == 255 {
+			if world[globalY][globalX] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
-					newWorld[row][col] = 0 // Cell dies
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalRow, Y: globalCol}}
+					newWorld[y][x] = 0 // Cell dies
+					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
 				} else {
-					newWorld[row][col] = 255 // Cell stays alive
+					newWorld[y][x] = 255 // Cell stays alive
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
-					newWorld[row][col] = 255 // Cell becomes alive
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalRow, Y: globalCol}}
+					newWorld[y][x] = 255 // Cell becomes alive
+					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
 				} else {
-					newWorld[row][col] = 0 // Cell stays dead
+					newWorld[y][x] = 0 // Cell stays dead
 				}
 			}
 		}

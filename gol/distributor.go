@@ -53,8 +53,8 @@ func distributor(p Params, c distributorChannels) {
 	// add value to the input
 	for y := 0; y < p.ImageHeight; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
-			world[y][x] = <-c.ioInput
-			val := world[y][x]
+			val := <-c.ioInput
+			world[y][x] = val
 			if val == 255 {
 				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
 			}
@@ -66,6 +66,7 @@ func distributor(p Params, c distributorChannels) {
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
+		c.completedTurns = turn + 1
 
 		if p.Threads == 1 {
 			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, world, c)
@@ -90,7 +91,6 @@ func distributor(p Params, c distributorChannels) {
 			world = mergeWorld
 		}
 
-		c.completedTurns = turn + 1
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		select {
@@ -141,12 +141,12 @@ func distributor(p Params, c distributorChannels) {
 	outputImage(c, p, world)
 
 	// TODO: Report the final state using FinalTurnCompleteEvent.
-	c.events <- FinalTurnComplete{CompletedTurns: p.Turns, Alive: calculateAliveCells(p, world)}
+	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
 
-	c.events <- StateChange{turn, Quitting}
+	c.events <- StateChange{c.completedTurns, Quitting}
 
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
 	close(c.events)
