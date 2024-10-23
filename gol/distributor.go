@@ -3,104 +3,61 @@ package gol
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
 type distributorChannels struct {
-	events     chan<- Event
-	ioCommand  chan<- ioCommand
-	ioIdle     <-chan bool
-	ioFilename chan<- string
-	ioOutput   chan<- uint8
-	ioInput    <-chan uint8
+	events         chan<- Event
+	ioCommand      chan<- ioCommand
+	ioIdle         <-chan bool
+	ioFilename     chan<- string
+	ioOutput       chan<- uint8
+	ioInput        <-chan uint8
+	completedTurns int
+	keyPresses     <-chan rune
 }
 
-func calculateAliveCells(world [][]byte) []util.Cell {
-	var aliveCells []util.Cell
-
-	// Iterate over every cell in the world
-	for row := 0; row < len(world); row++ {
-		for col := 0; col < len(world[0]); col++ {
-			// If the cell is alive (value is 255), add it to the list
-			if world[row][col] == 255 {
-				aliveCells = append(aliveCells, util.Cell{X: col, Y: row})
-			}
-		}
-	}
-
-	return aliveCells
+func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
+	worldPart := calculateNextState(startY, endY, startX, endX, p, world, c)
+	tempWorld <- worldPart
 }
 
-func countLiveNeighbors(world [][]byte, row, col int) int {
-	rows := len(world)
-	cols := len(world[0])
-	neighbors := [8][2]int{
-		{-1, -1}, {-1, 0}, {-1, 1}, // Top-left, Top, Top-right
-		{0, -1}, {0, 1}, // Left,            Right
-		{1, -1}, {1, 0}, {1, 1}, // Bottom-left, Bottom, Bottom-right
-	}
-
-	liveNeighbors := 0
-	for _, n := range neighbors {
-		newRow := (row + n[0] + rows) % rows
-		newCol := (col + n[1] + cols) % cols
-		if world[newRow][newCol] == 255 {
-			liveNeighbors++
+// send the world into output
+func outputImage(c distributorChannels, p Params, world [][]byte) {
+	c.ioCommand <- ioOutput
+	filename := strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
+	c.ioFilename <- filename
+	for y := 0; y < p.ImageHeight; y++ {
+		for x := 0; x < p.ImageWidth; x++ {
+			c.ioOutput <- world[y][x]
 		}
 	}
-	return liveNeighbors
-}
+	c.ioCommand <- ioCheckIdle
+	<-c.ioIdle
+	c.events <- ImageOutputComplete{c.completedTurns, filename}
 
-func calculateNextState(p Params, world [][]byte) [][]byte {
-
-	newWorld := make([][]byte, p.ImageHeight)
-	for i := range newWorld {
-		newWorld[i] = make([]byte, p.ImageWidth)
-	}
-
-	// Iterate over each cell in the world
-	for row := 0; row < p.ImageHeight; row++ {
-		for col := 0; col < p.ImageWidth; col++ {
-			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(world, row, col)
-
-			// Apply the Game of Life rules
-			if world[row][col] == 255 {
-				// Cell is alive
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					newWorld[row][col] = 0 // Cell dies
-				} else {
-					newWorld[row][col] = 255 // Cell stays alive
-				}
-			} else {
-				// Cell is dead
-				if liveNeighbors == 3 {
-					newWorld[row][col] = 255 // Cell becomes alive
-				} else {
-					newWorld[row][col] = 0 // Cell stays dead
-				}
-			}
-		}
-	}
-	return newWorld
 }
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
 	// TODO: Create a 2D slice to store the world.
-	world := make([][]byte, p.ImageHeight)
-	for i := range world {
-		world[i] = make([]byte, p.ImageWidth)
+	world := initWorld(p.ImageHeight, p.ImageWidth)
 
-	}
+	ticker := time.NewTicker(2 * time.Second)
+
 	c.ioCommand <- ioInput
 	c.ioFilename <- strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth)}, "x")
-
+	// add value to the input
 	for y := 0; y < p.ImageHeight; y++ {
 		for x := 0; x < p.ImageWidth; x++ {
-			world[y][x] = <-c.ioInput
+			val := <-c.ioInput
+			world[y][x] = val
+			if val == 255 {
+				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+			}
 		}
 	}
 
@@ -108,20 +65,88 @@ func distributor(p Params, c distributorChannels) {
 	c.events <- StateChange{turn, Executing}
 
 	// TODO: Execute all turns of the Game of Life.
-
 	for turn = 0; turn < p.Turns; turn++ {
-		world = calculateNextState(p, world)
+		c.completedTurns = turn + 1
 
-		c.events <- TurnComplete{CompletedTurns: turn + 1}
+		if p.Threads == 1 {
+			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, world, c)
+		} else {
+			tempWorld := make([]chan [][]byte, p.Threads)
+			for i := range tempWorld {
+				tempWorld[i] = make(chan [][]byte)
+			}
+
+			heightPerThread := p.ImageHeight / p.Threads
+
+			for i := 0; i < p.Threads-1; i++ {
+				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, world, c, tempWorld[i])
+			}
+			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, world, c, tempWorld[p.Threads-1])
+
+			mergeWorld := initWorld(0, 0)
+			for i := 0; i < p.Threads; i++ {
+				pieces := <-tempWorld[i]
+				mergeWorld = append(mergeWorld, pieces...)
+			}
+			world = mergeWorld
+		}
+
+		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
+
+		select {
+		// ticker.C is a channel that receives ticks every 2 seconds
+		case <-ticker.C:
+			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+		case key := <-c.keyPresses:
+			switch key {
+			case 's':
+				c.events <- StateChange{c.completedTurns, Executing}
+				outputImage(c, p, world)
+			case 'q':
+				outputImage(c, p, world)
+				c.ioCommand <- ioCheckIdle
+				<-c.ioIdle
+				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+				c.events <- StateChange{turn, Quitting}
+				close(c.events)
+				return
+			case 'p':
+				c.events <- StateChange{turn, Paused}
+				pause := true
+
+				for pause {
+					key := <-c.keyPresses
+					switch key {
+					case 'p':
+						c.events <- StateChange{turn, Executing}
+						pause = false
+					case 's':
+						outputImage(c, p, world)
+					case 'q':
+						outputImage(c, p, world)
+						c.ioCommand <- ioCheckIdle
+						<-c.ioIdle
+						c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+						c.events <- StateChange{turn, Quitting}
+						close(c.events)
+						return
+					}
+				}
+			}
+		default:
+		}
+
 	}
 
+	outputImage(c, p, world)
+
 	// TODO: Report the final state using FinalTurnCompleteEvent.
-	c.events <- FinalTurnComplete{CompletedTurns: p.Turns, Alive: calculateAliveCells(world)}
+	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
 
-	c.events <- StateChange{turn, Quitting}
+	c.events <- StateChange{c.completedTurns, Quitting}
 
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
 	close(c.events)
