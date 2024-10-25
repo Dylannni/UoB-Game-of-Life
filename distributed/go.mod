@@ -1,0 +1,1 @@
+module uk.ac.bris.cs/gameoflife
