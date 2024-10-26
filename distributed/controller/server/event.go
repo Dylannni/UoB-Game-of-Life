@@ -3,7 +3,7 @@ package server
 import (
 	"fmt"
 
-	"uk.ac.bris.cs/gameoflife/client/util"
+	//"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
@@ -61,7 +61,7 @@ type CellFlipped struct { // implements Event
 // Choose one of them.
 type CellsFlipped struct { // implements Event
 	CompletedTurns int
-	Cells          []util.Cell
+	Cells          []stdstruct.Cell
 }
 
 // `TurnComplete` is an Event notifying the GUI about turn completion.
@@ -76,7 +76,7 @@ type TurnComplete struct { // implements Event
 // SDL closes the window when this Event is sent.
 type FinalTurnComplete struct {
 	CompletedTurns int
-	Alive          []util.Cell
+	Alive          []stdstruct.Cell
 }
 
 // String methods allow the different types of Events and States to be printed.

@@ -2,8 +2,6 @@ package server
 
 //import "uk.ac.bris.cs/gameoflife/stdstruct"
 
-//import "uk.ac.bris.cs/gameoflife/stdstruct"
-
 // Params provides the details of how to run the Game of Life and which image to load.
 type Params struct {
 	Turns       int
