@@ -35,7 +35,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.Request, res *stdstruct.Re
 }
 
 func main() {
-	pAddr := flag.String("port", "8030", "Port to listen on")
+	pAddr := flag.String("port", "8050", "Port to listen on")
 	flag.Parse()
 	rpc.Register(&GameOfLife{})
 	listener, err := net.Listen("tcp", ":"+*pAddr)
