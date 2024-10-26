@@ -1,9 +1,9 @@
 package server
 
-import "uk.ac.bris.cs/gameoflife/util"
+//"uk.ac.bris.cs/gameoflife/stdstruct"
 
 // initialise world
-func initWorld(height, width int) [][]byte {
+func InitWorld(height, width int) [][]byte {
 	world := make([][]byte, height)
 	for i := range world {
 		world[i] = make([]byte, width)
@@ -11,20 +11,20 @@ func initWorld(height, width int) [][]byte {
 	return world
 }
 
-func calculateAliveCells(p Params, world [][]byte) []util.Cell {
-	var aliveCells []util.Cell
+// func calculateAliveCells(p Params, world [][]byte) []stdstruct.Cell {
+// 	var aliveCells []stdstruct.Cell
 
-	// Iterate over every cell in the world
-	for row := 0; row < p.ImageHeight; row++ {
-		for col := 0; col < p.ImageWidth; col++ {
-			// If the cell is alive (value is 255), add it to the list
-			if world[row][col] == 255 {
-				aliveCells = append(aliveCells, util.Cell{X: col, Y: row})
-			}
-		}
-	}
-	return aliveCells
-}
+// 	// Iterate over every cell in the world
+// 	for row := 0; row < p.ImageHeight; row++ {
+// 		for col := 0; col < p.ImageWidth; col++ {
+// 			// If the cell is alive (value is 255), add it to the list
+// 			if world[row][col] == 255 {
+// 				aliveCells = append(aliveCells, stdstruct.Cell{X: col, Y: row})
+// 			}
+// 		}
+// 	}
+// 	return aliveCells
+// }
 
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
@@ -60,7 +60,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels) [][]byte {
+func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) [][]byte {
 	height := endY - startY
 	width := endX - startX
 
@@ -82,7 +82,7 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					newWorld[y][x] = 0 // Cell dies
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
+					//c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: stdstruct.Cell{X: globalX, Y: globalY}}
 				} else {
 					newWorld[y][x] = 255 // Cell stays alive
 				}
@@ -90,7 +90,7 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 				// Cell is dead
 				if liveNeighbors == 3 {
 					newWorld[y][x] = 255 // Cell becomes alive
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
+					//c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: stdstruct.Cell{X: globalX, Y: globalY}}
 				} else {
 					newWorld[y][x] = 0 // Cell stays dead
 				}
