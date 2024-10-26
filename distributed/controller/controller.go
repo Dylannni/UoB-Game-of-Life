@@ -15,7 +15,7 @@ import (
 
 type GameOfLife struct{}
 
-func (s *GameOfLife) calculateNextTurn(req *stdstruct.Request, res *stdstruct.Response) (err error) {
+func (s *GameOfLife) CalculateNextTurn(req *stdstruct.Request, res *stdstruct.Response) (err error) {
 	p := server.Params{
 		Turns:       0,
 		Threads:     0,
