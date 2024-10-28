@@ -26,6 +26,7 @@ type distributorChannels struct {
 func distributor(p Params, c distributorChannels) {
 
 	client, err := rpc.Dial("tcp", "54.152.108.208:8030")
+
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
 		return
