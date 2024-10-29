@@ -99,7 +99,7 @@ func distributor(p Params, c distributorChannels) {
 				outputImage(c, p, world)
 				fmt.Println("Shutting down the system ")
 				var shutdownReq, shutdownRes struct{}
-				client.Call("GameOfLife.Shutdown", &shutdownReq, &shutdownRes)
+				client.Call("GameOfLife.ShutDown", &shutdownReq, &shutdownRes)
 
 				// c.ioCommand <- ioCheckIdle
 				// <-c.ioIdle
