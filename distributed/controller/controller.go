@@ -3,6 +3,9 @@ package main
 import (
 	//"errors"
 	"flag"
+	"fmt"
+	"os"
+
 	//"fmt"
 
 	"net"
@@ -15,7 +18,7 @@ import (
 
 type GameOfLife struct{}
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.Request, res *stdstruct.Response) (err error) {
+func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
 	p := server.Params{
 		Turns:       0,
 		Threads:     0,
@@ -31,6 +34,13 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.Request, res *stdstruct.Re
 	nextSate := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
 
 	res.World = nextSate
+	return nil
+}
+
+// shutting down the server when k is pressed
+func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutResponse) (err error) {
+	fmt.Println("Shutting down the server")
+	os.Exit(0)
 	return nil
 }
 

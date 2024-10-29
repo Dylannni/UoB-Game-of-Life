@@ -25,7 +25,7 @@ type distributorChannels struct {
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
-	client, err := rpc.Dial("tcp", "34.207.124.47:8030")
+	client, err := rpc.Dial("tcp", "44.210.136.48:8030")
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
@@ -57,14 +57,14 @@ func distributor(p Params, c distributorChannels) {
 	for turn = 0; turn < p.Turns; turn++ {
 
 		// prepare request for server
-		req := stdstruct.Request{
+		req := stdstruct.CalRequest{
 			StartY: 0,
 			EndY:   p.ImageHeight,
 			StartX: 0,
 			EndX:   p.ImageWidth,
 			World:  world,
 		}
-		var res stdstruct.Response
+		var res stdstruct.CalResponse
 
 		err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
 		if err != nil {
@@ -97,12 +97,15 @@ func distributor(p Params, c distributorChannels) {
 			case 'k':
 				// Both server and controller down
 				outputImage(c, p, world)
-				fmt.Println("Force quitting")
-				c.ioCommand <- ioCheckIdle
-				<-c.ioIdle
-				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
-				c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
-				close(c.events)
+				fmt.Println("Shutting down the system ")
+				var shutdownReq, shutdownRes struct{}
+				client.Call("GameOfLife.Shutdown", &shutdownReq, &shutdownRes)
+
+				// c.ioCommand <- ioCheckIdle
+				// <-c.ioIdle
+				// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+				// c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
+				// close(c.events)
 
 			case 'p':
 				c.events <- StateChange{turn, Paused}

@@ -4,7 +4,7 @@ type Cell struct {
 	X, Y int
 }
 
-type Request struct {
+type CalRequest struct {
 	StartX int
 	EndX   int
 	StartY int
@@ -12,7 +12,13 @@ type Request struct {
 	World  [][]byte
 }
 
-type Response struct {
+type CalResponse struct {
 	World      [][]byte
 	AliveCells []Cell
+}
+
+type ShutRequest struct {
+}
+
+type ShutResponse struct {
 }
