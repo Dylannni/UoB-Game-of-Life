@@ -100,12 +100,11 @@ func distributor(p Params, c distributorChannels) {
 				fmt.Println("Shutting down the system ")
 				var shutdownReq, shutdownRes struct{}
 				client.Call("GameOfLife.ShutDown", &shutdownReq, &shutdownRes)
-
-				// c.ioCommand <- ioCheckIdle
-				// <-c.ioIdle
-				// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
-				// c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
-				// close(c.events)
+				c.ioCommand <- ioCheckIdle
+				<-c.ioIdle
+				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+				c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
+				close(c.events)
 
 			case 'p':
 				c.events <- StateChange{turn, Paused}
