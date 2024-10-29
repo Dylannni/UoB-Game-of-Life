@@ -25,7 +25,7 @@ type distributorChannels struct {
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
-	client, err := rpc.Dial("tcp", "54.152.108.208:8030")
+	client, err := rpc.Dial("tcp", "34.207.124.47:8030")
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
@@ -88,13 +88,22 @@ func distributor(p Params, c distributorChannels) {
 				c.events <- StateChange{c.completedTurns, Executing}
 				outputImage(c, p, world)
 			case 'q':
+				// Server still alive, controller down
 				outputImage(c, p, world)
+				c.events <- StateChange{turn, Quitting}
+				close(c.events)
+
+			//all components of the distributed system are shut down
+			case 'k':
+				// Both server and controller down
+				outputImage(c, p, world)
+				fmt.Println("Force quitting")
 				c.ioCommand <- ioCheckIdle
 				<-c.ioIdle
 				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
-				c.events <- StateChange{turn, Quitting}
+				c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
 				close(c.events)
-				return
+
 			case 'p':
 				c.events <- StateChange{turn, Paused}
 				pause := true
@@ -103,6 +112,7 @@ func distributor(p Params, c distributorChannels) {
 					key := <-c.keyPresses
 					switch key {
 					case 'p':
+						fmt.Println("Continuing")
 						c.events <- StateChange{turn, Executing}
 						pause = false
 					case 's':
