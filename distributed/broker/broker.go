@@ -15,6 +15,7 @@ import (
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
 	responseCh = make(map[string]chan stdstruct.CalResponse)
+	workers    = []string{"54.167.80.103:8031", "54.166.66.95:8032"}
 	topicmx    sync.RWMutex
 )
 
@@ -34,51 +35,66 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 	defer topicmx.RUnlock()
 	if ch, ok := topics[topic]; ok {
 		ch <- request
+
+		for _, workerAddress := range workers {
+			go func(workerAddress string, req stdstruct.CalRequest) {
+				client, _ := rpc.Dial("tcp", workerAddress)
+				defer client.Close()
+				response := new(stdstruct.CalResponse)
+				client.Call("GameOfLife.CalculateNextTurn", request, response)
+				topicmx.RLock()
+				responseChannel, exists := responseCh[topic]
+				topicmx.RUnlock()
+				if exists {
+					responseChannel <- *response
+				}
+			}(workerAddress, request)
+		}
 	}
 	return
 }
 
-// The task is continuously fetched from the specified topic channel, processed, and the result is sent to the server through RPC.
-// process the task from server
-func subscriberLoop(topic string, resquestCh chan stdstruct.CalRequest, client *rpc.Client, callback string) {
-	for {
-		job := <-resquestCh
-		response := new(stdstruct.CalResponse)
-		err := client.Call(callback, job, response)
-		if err != nil {
-			fmt.Println(err)
-			//Place the unfulfilled job back on the topic channel.
-			resquestCh <- job
-			client.Close()
-			break
-		} else {
-			topicmx.RLock()
-			responseChannel, exists := responseCh[topic]
-			topicmx.RUnlock()
-			if exists {
-				responseChannel <- *response
-			}
-		}
-	}
-}
+// // The task is continuously fetched from the specified topic channel, processed, and the result is sent to the server through RPC.
+// // process the task from server
+// func subscriberLoop(topic string, resquestCh chan stdstruct.CalRequest, client *rpc.Client, callback string) {
+// 	for {
+// 		job := <-resquestCh
+// 		response := new(stdstruct.CalResponse)
+// 		err := client.Call(callback, job, response)
+// 		if err != nil {
+// 			fmt.Println(err)
+// 			//Place the unfulfilled job back on the topic channel.
+// 			resquestCh <- job
+// 			client.Close()
+// 			break
+// 		} else {
+// 			topicmx.RLock()
+// 			responseChannel, exists := responseCh[topic]
+// 			topicmx.RUnlock()
+// 			if exists {
+// 				responseChannel <- *response
+// 			}
+// 		}
+// 	}
+// }
 
-// subscribe specific job to a worker,Enables the node to fetch tasks from this topic and process them
-func subscribe(topic string, workerAddress string, callback string) (err error) {
-	topicmx.RLock()
-	requestCh, exists := topics[topic]
-	topicmx.RUnlock()
+// // subscribe specific job to a worker,Enables the node to fetch tasks from this topic and process them
+// func subscribe(topic string, workerAddress string, callback string) (err error) {
+// 	topicmx.RLock()
+// 	requestCh, exists := topics[topic]
+// 	topicmx.RUnlock()
 
-	if !exists {
-		return errors.New("topic not found")
-	}
+// 	if !exists {
+// 		return errors.New("topic not found")
+// 	}
 
-	client, err := rpc.Dial("tcp", workerAddress)
-	if err != nil {
-		return err
-	}
-	go subscriberLoop(topic, requestCh, client, callback)
-	return nil
-}
+// 	client, err := rpc.Dial("tcp", workerAddress)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	go subscriberLoop(topic, requestCh, client, callback)
+// 	return nil
+// }
 
 // collect the results
 func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
@@ -109,10 +125,10 @@ func (b *Broker) CreateChannel(req stdstruct.ChannelRequest, res *stdstruct.Stat
 	return
 }
 
-func (b *Broker) Subscribe(req stdstruct.Subscription, res *stdstruct.Status) (err error) {
-	err = subscribe(req.Topic, req.FactoryAddress, req.Callback)
-	return err
-}
+// func (b *Broker) Subscribe(req stdstruct.Subscription, res *stdstruct.Status) (err error) {
+// 	err = subscribe(req.Topic, req.FactoryAddress, req.Callback)
+// 	return err
+// }
 
 func (b *Broker) Publish(req stdstruct.PublishRequest, res *stdstruct.Status) (err error) {
 	err = publish(req.Topic, req.Request)
