@@ -19,6 +19,7 @@ import (
 type GameOfLife struct{}
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
+	fmt.Println("[DEBUG] Received CalculateNextTurn request")
 	p := server.Params{
 		Turns:       0,
 		Threads:     0,
@@ -31,9 +32,11 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 			world[y][x] = req.World[y][x]
 		}
 	}
+	fmt.Println("[DEBUG] Starting CalculateNextState")
 	nextSate := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
 
 	res.World = nextSate
+	fmt.Println("[DEBUG] Completed CalculateNextTurn")
 	return nil
 }
 
@@ -46,15 +49,18 @@ func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutRes
 
 func main() {
 	workerPort := "8031"
+	fmt.Println("[DEBUG] Registering GameOfLife RPC service")
 	rpc.Register(&GameOfLife{})
 	listener, err := net.Listen("tcp", ":"+workerPort)
 	//listener, err := net.Listen("tcp", ":"+*worker2Port)
 	if err != nil {
+		fmt.Printf("[ERROR] Failed to start listener on port %s: %v\n", workerPort, err)
 		panic(err)
 	}
 
 	defer listener.Close()
 	fmt.Println("Worker is listening on port", workerPort)
+	fmt.Println("[DEBUG] Waiting for incoming connections...")
 	go rpc.Accept(listener)
 
 }

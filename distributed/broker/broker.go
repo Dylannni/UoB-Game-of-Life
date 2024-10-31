@@ -24,6 +24,7 @@ func newTopic(topic string, buflen int) {
 	topicmx.Lock()
 	defer topicmx.Unlock()
 	if _, ok := topics[topic]; !ok {
+		fmt.Printf("Creating new topic: %s with buffer length: %d\n", topic, buflen)
 		topics[topic] = make(chan stdstruct.CalRequest, buflen)
 		responseCh[topic] = make(chan stdstruct.CalResponse, buflen)
 	}
@@ -34,22 +35,35 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 	topicmx.RLock()
 	defer topicmx.RUnlock()
 	if ch, ok := topics[topic]; ok {
+		fmt.Printf("Publishing request to topic: %s\n", topic)
 		ch <- request
 
 		for _, workerAddress := range workers {
 			go func(workerAddress string, req stdstruct.CalRequest) {
-				client, _ := rpc.Dial("tcp", workerAddress)
+				fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
+				client, err := rpc.Dial("tcp", workerAddress)
+				if err != nil {
+					fmt.Printf("Error connecting to worker %s: %v\n", workerAddress, err)
+					return
+				}
 				defer client.Close()
 				response := new(stdstruct.CalResponse)
-				client.Call("GameOfLife.CalculateNextTurn", request, response)
+				err = client.Call("GameOfLife.CalculateNextTurn", req, response)
+				if err != nil {
+					fmt.Printf("Error during worker calculation at %s: %v\n", workerAddress, err)
+					return
+				}
 				topicmx.RLock()
 				responseChannel, exists := responseCh[topic]
 				topicmx.RUnlock()
 				if exists {
+					fmt.Printf("Publishing response from worker %s to response channel for topic: %s\n", workerAddress, topic)
 					responseChannel <- *response
 				}
 			}(workerAddress, request)
 		}
+	} else {
+		fmt.Printf("Topic %s not found\n", topic)
 	}
 	return
 }
@@ -102,13 +116,17 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	responseChannel, ok := responseCh[topic]
 	topicmx.RUnlock()
 	if !ok {
+		fmt.Printf("Response channel for topic %s not found\n", topic)
 		return nil, errors.New("not found")
 	}
+	fmt.Printf("Response channel for topic %s not found\n", topic)
 	for {
 		select {
 		case result := <-responseChannel:
+			fmt.Printf("Received response for topic: %s\n", topic)
 			res = append(res, result)
 		default:
+			fmt.Printf("Finished collecting responses for topic: %s\n", topic)
 			return res, nil
 		}
 	}
@@ -120,6 +138,7 @@ type Broker struct {
 
 // create a new channel for the publishing and proccessing the task
 func (b *Broker) CreateChannel(req stdstruct.ChannelRequest, res *stdstruct.Status) (err error) {
+	fmt.Printf("Received request to create channel: %s\n", req.Topic)
 	newTopic(req.Topic, req.Buffer)
 	res.Message = "Channel created"
 	return
@@ -131,11 +150,13 @@ func (b *Broker) CreateChannel(req stdstruct.ChannelRequest, res *stdstruct.Stat
 // }
 
 func (b *Broker) Publish(req stdstruct.PublishRequest, res *stdstruct.Status) (err error) {
+	fmt.Printf("Received publish request for topic: %s\n", req.Topic)
 	err = publish(req.Topic, req.Request)
 	return err
 }
 
 func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.ResultResponse) (err error) {
+	fmt.Printf("Received request to collect responses for topic: %s\n", req.Topic)
 	result, _ := collectResponses(req.Topic)
 	res.Results = result
 	return nil
@@ -153,9 +174,15 @@ func main() {
 	broker := &Broker{shutdownChan: make(chan struct{})}
 
 	rpc.Register(broker)
-	listener, _ := net.Listen("tcp", ":"+*pAddr)
+	listener, err := net.Listen("tcp", ":"+*pAddr)
+	if err != nil {
+		fmt.Printf("Error starting broker: %v\n", err)
+		return
+	}
 	defer listener.Close()
+	fmt.Printf("Broker is listening on port %s\n", *pAddr)
 	go func() { rpc.Accept(listener) }()
 
 	<-broker.shutdownChan
+	fmt.Println("Broker has been shut down")
 }

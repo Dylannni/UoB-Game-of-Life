@@ -99,7 +99,11 @@ func distributor(p Params, c distributorChannels) {
 		resultReq := stdstruct.ResultRequest{
 			Topic: "game of life task",
 		}
-		client.Call("Broker.CollectResponses", resultReq, &resultRes)
+		err := client.Call("Broker.CollectResponses", resultReq, &resultRes)
+		if err != nil {
+			fmt.Println("Error publishing request to broker:", err)
+			return
+		}
 
 		// put results into world and update
 		for _, res := range resultRes.Results {
