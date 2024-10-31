@@ -2,7 +2,7 @@ package main
 
 import (
 	//"errors"
-	"flag"
+
 	"fmt"
 	"os"
 
@@ -45,38 +45,16 @@ func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutRes
 }
 
 func main() {
-	brokerAddr := flag.String("broker", "54.167.80.103:8030", "Broker address")
-	workerIP := flag.String("ip", "54.91.168.49", "54.166.66.95")
-	workerPort := flag.String("port", "8031", "Worker port")
-	flag.Parse()
+	workerPort := "8031"
 	rpc.Register(&GameOfLife{})
-	listener, err := net.Listen("tcp", ":"+*workerPort)
+	listener, err := net.Listen("tcp", ":"+workerPort)
 	//listener, err := net.Listen("tcp", ":"+*worker2Port)
 	if err != nil {
 		panic(err)
-
 	}
 
 	defer listener.Close()
+	fmt.Println("Worker is listening on port", workerPort)
 	go rpc.Accept(listener)
 
-	// connect to broker
-	client, err := rpc.Dial("tcp", *brokerAddr)
-	if err != nil {
-		fmt.Println("Error connecting to broker:", err)
-		os.Exit(1)
-	}
-	defer client.Close()
-
-	// Construct the worker address
-	workerAddr := fmt.Sprintf("%s:%s", *workerIP, *workerPort)
-
-	// Subscribe to the broker
-	var subRes stdstruct.Status
-	subReq := stdstruct.Subscription{
-		Topic:          "game of life task",
-		FactoryAddress: workerAddr,
-		Callback:       "GameOfLife.CalculateNextTurn",
-	}
-	client.Call("Broker.Subscribe", subReq, &subRes)
 }
