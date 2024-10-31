@@ -1,35 +1,87 @@
+""" Without error bars"""
+
+# import pandas as pd
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import seaborn as sns
+
+# # 读取保存的 CSV 数据。
+# benchmark_data = pd.read_csv('results.csv', header=0, names=['name', 'time', 'range'])
+
+# # 将 'time' 列的数据类型转换为浮点数（如果尚未转换）。
+# benchmark_data['time'] = benchmark_data['time'].astype(float)
+
+# # 从基准测试名称中提取使用的线程数。
+# # 例如，"Gol/512x512x1000-1-10" 使用了 1 个线程。
+# # 使用正则表达式提取线程数。
+# benchmark_data['threads'] = benchmark_data['name'].str.extract(r'Gol/512x512x1000-(\d+)-\d+').astype(int)
+
+# # 从 'range' 列中去掉百分号并转换为浮点数。
+# benchmark_data['range'] = benchmark_data['range'].str.rstrip('%').astype(float)
+
+# # 打印数据以检查是否正确解析。
+# print(benchmark_data)
+
+# # 绘制折线图，显示线程数与时间的关系。
+# plt.figure(figsize=(10, 6))
+# ax = sns.lineplot(data=benchmark_data, x='threads', y='time', marker='o')
+
+# # 设置坐标轴标签和标题。
+# ax.set_xlabel('使用的线程数')
+# ax.set_ylabel('耗时（秒）')
+# ax.set_title('Game of Life 基准测试结果：线程数 vs 耗时')
+
+# # 添加网格以提高可读性。
+# plt.grid(True)
+
+# # 显示完整的图形。
+# plt.show()
+
+
+
+""" With error bars"""
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# Removes the irrelevant information from the results.csv file
-contents = open("results.csv", "r").read().split('\n')
-with open("parsed_results.csv", 'w') as file:
-    for line in contents:
-        if 'Filter' in line:
-            file.write(line + '\n')
+# 读取保存的 CSV 数据。
+benchmark_data = pd.read_csv('results.csv', header=0, names=['name', 'time', 'range'])
 
-# Read in the saved CSV data.
-benchmark_data = pd.read_csv('parsed_results.csv', header=0, names=['name', 'time', 'range'])
+# 将 'time' 列的数据类型转换为浮点数。
+benchmark_data['time'] = benchmark_data['time'].astype(float)
 
-# Go stores benchmark results in nanoseconds. Convert all results to seconds.
-benchmark_data['time'] /= 1e+9
+# 从 'range' 列中去掉百分号并转换为浮点数。
+benchmark_data['range'] = benchmark_data['range'].str.rstrip('%').astype(float)
 
-# Use the name of the benchmark to extract the number of worker threads used.
-#  e.g. "Filter/16-8" used 16 worker threads (goroutines).
-# Note how the benchmark name corresponds to the regular expression 'Filter/\d+_workers-\d+'.
-# Also note how we place brackets around the value we want to extract.
-benchmark_data['threads'] = benchmark_data['name'].str.extract('Filter/(\d+)_workers-\d+').apply(pd.to_numeric)
-benchmark_data['cpu_cores'] = benchmark_data['name'].str.extract('Filter/\d+_workers-(\d+)').apply(pd.to_numeric)
+# 移除 'name' 列中包含 NaN 的行（例如空行或格式不正确的行）。
+benchmark_data = benchmark_data.dropna(subset=['name'])
 
+# 仅保留 'name' 列中包含特定模式的行，防止不匹配的行造成问题。
+benchmark_data = benchmark_data[benchmark_data['name'].str.contains(r'Gol/512x512x1000-\d+-\d+')]
+
+# 从基准测试名称中提取使用的线程数。
+benchmark_data['threads'] = benchmark_data['name'].str.extract(r'Gol/512x512x1000-(\d+)-\d+')[0].astype(int)
+
+# 计算误差值，根据百分比计算绝对误差。
+benchmark_data['error'] = benchmark_data['time'] * benchmark_data['range'] / 100
+
+# 打印数据以检查是否正确解析。
 print(benchmark_data)
 
-# Plot a bar chart.
-ax = sns.barplot(data=benchmark_data, x='threads', y='time')
+# 绘制带有误差条的折线图。
+plt.figure(figsize=(10, 6))
+ax = sns.lineplot(data=benchmark_data, x='threads', y='time', marker='o', label='Average Time')
 
-# Set descriptive axis lables.
-ax.set(xlabel='Worker threads used', ylabel='Time taken (s)')
+# 添加误差条。
+plt.errorbar(benchmark_data['threads'], benchmark_data['time'], yerr=benchmark_data['error'], fmt='none', c='blue', capsize=5)
 
-# Display the full figure.
+# 设置坐标轴标签和标题。
+ax.set_xlabel('Number of Threads Used')
+ax.set_ylabel('Time Taken (seconds)')
+ax.set_title('Game of Life Benchmark Results: Threads vs Time (with Error Bars)')
+
+# 添加网格以提高可读性。
+plt.grid(True)
+
+# 显示完整的图形。
 plt.show()
