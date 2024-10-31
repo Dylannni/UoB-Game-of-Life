@@ -45,8 +45,8 @@ func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutRes
 }
 
 func main() {
-	brokerAddr := flag.String("broker", "3.95.198.0:8030", "Broker address")
-	workerIP := flag.String("ip", "98.81.84.228", "44.201.136.20")
+	brokerAddr := flag.String("broker", "54.167.80.103:8030", "Broker address")
+	workerIP := flag.String("ip", "54.91.168.49", "54.166.66.95")
 	workerPort := flag.String("port", "8031", "Worker port")
 	flag.Parse()
 	rpc.Register(&GameOfLife{})
