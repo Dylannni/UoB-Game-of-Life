@@ -50,7 +50,7 @@ func main() {
 	workerPort := flag.String("port", "8031", "Worker port")
 	flag.Parse()
 	rpc.Register(&GameOfLife{})
-	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%s", *workerIP, *workerPort))
+	listener, err := net.Listen("tcp", ":"+*workerPort)
 	//listener, err := net.Listen("tcp", ":"+*worker2Port)
 	if err != nil {
 		panic(err)
