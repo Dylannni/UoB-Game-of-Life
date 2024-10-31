@@ -2,7 +2,7 @@ package main
 
 import (
 	//"errors"
-
+	"flag"
 	"fmt"
 	"os"
 
@@ -48,13 +48,13 @@ func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutRes
 }
 
 func main() {
-	workerPort := "8031"
+	workerPort := flag.String("port", "8031", "Worker port to listen on")
 	fmt.Println("[DEBUG] Registering GameOfLife RPC service")
 	rpc.Register(&GameOfLife{})
-	listener, err := net.Listen("tcp", ":"+workerPort)
+	listener, err := net.Listen("tcp", ":"+*workerPort)
 	//listener, err := net.Listen("tcp", ":"+*worker2Port)
 	if err != nil {
-		fmt.Printf("[ERROR] Failed to start listener on port %s: %v\n", workerPort, err)
+		fmt.Printf("[ERROR] Failed to start listener on port %s: %v\n", *workerPort, err)
 		panic(err)
 	}
 
