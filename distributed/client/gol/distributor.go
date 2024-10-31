@@ -24,11 +24,12 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
+	brokerAdr := "3.95.198.0:8030"
 
-	client, err := rpc.Dial("tcp", "44.210.136.48:8030")
+	client, err := rpc.Dial("tcp", brokerAdr)
 
 	if err != nil {
-		fmt.Println("Error connecting to server:", err)
+		fmt.Println("Error connecting to broker:", err)
 		return
 	}
 	defer client.Close()
@@ -53,27 +54,62 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	c.events <- StateChange{turn, Executing}
 
+	// create channel
+	var chRes stdstruct.Status
+	chReq := stdstruct.ChannelRequest{
+		Topic:  "game of life task",
+		Buffer: p.Threads,
+	}
+	client.Call("Broker.CreateChannel", chReq, &chRes)
+
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
+		heightPerThread := p.ImageHeight / p.Threads
 
-		// prepare request for server
-		req := stdstruct.CalRequest{
-			StartY: 0,
-			EndY:   p.ImageHeight,
-			StartX: 0,
-			EndX:   p.ImageWidth,
-			World:  world,
+		for i := 0; i < p.Threads; i++ {
+			startY := i * heightPerThread
+			endY := (i + 1) * heightPerThread
+			if i == p.Threads-1 {
+				endY = p.ImageHeight
+			}
+
+			// prepare request for server, the task are seperated into smaller one
+			req := stdstruct.CalRequest{
+				StartX:    0,
+				EndX:      p.ImageWidth,
+				StartY:    startY,
+				EndY:      endY,
+				World:     world,
+				TurnCount: turn,
+				Section:   i,
+			}
+
+			// publish task
+			var publishRes stdstruct.Status
+			publishReq := stdstruct.PublishRequest{
+				Topic:   "game of life task",
+				Request: req,
+			}
+			client.Call("Broker.Publish", publishReq, &publishRes)
+
 		}
-		var res stdstruct.CalResponse
 
-		err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
-		if err != nil {
-			fmt.Println("Error calculating next turn:", err)
-			return
+		// collect results
+		var resultRes stdstruct.ResultResponse
+		resultReq := stdstruct.ResultRequest{
+			Topic: "game of life task",
+		}
+		client.Call("Broker.CollectResponses", resultReq, &resultRes)
+
+		// put results into world and update
+		for _, res := range resultRes.Results {
+			for y := res.StartY; y < res.EndY; y++ {
+				for x := res.StartX; x < res.EndX; x++ {
+					world[y][x] = res.World[y][x]
+				}
+			}
 		}
 
-		//update the world
-		world = res.World
 		c.completedTurns = turn + 1
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
@@ -92,6 +128,7 @@ func distributor(p Params, c distributorChannels) {
 				outputImage(c, p, world)
 				c.events <- StateChange{turn, Quitting}
 				close(c.events)
+				return
 
 			//all components of the distributed system are shut down
 			case 'k':
@@ -100,6 +137,7 @@ func distributor(p Params, c distributorChannels) {
 				fmt.Println("Shutting down the system ")
 				var shutdownReq, shutdownRes struct{}
 				client.Call("GameOfLife.ShutDown", &shutdownReq, &shutdownRes)
+				client.Call("Broker.ShutDownBroker", &shutdownReq, &shutdownRes)
 				c.ioCommand <- ioCheckIdle
 				<-c.ioIdle
 				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
