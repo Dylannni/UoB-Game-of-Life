@@ -16,7 +16,7 @@ import (
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
 	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
-	workers    = []string{"100.27.228.161:8031", "3.84.31.117:8032"}
+	workers    = []string{"54.234.175.207:8031", "18.207.218.177:8032"}
 	topicmx    sync.RWMutex
 )
 
@@ -26,24 +26,6 @@ func InitWorld(height, width int) [][]byte {
 		world[i] = make([]byte, width)
 	}
 	return world
-}
-
-func copyCalRequest(req stdstruct.CalRequest, startY, endY int) stdstruct.CalRequest {
-	newWorld := make([][]byte, len(req.World))
-	for i := range req.World {
-		newWorld[i] = make([]byte, len(req.World[i]))
-		copy(newWorld[i], req.World[i])
-	}
-
-	return stdstruct.CalRequest{
-		StartX:    req.StartX,
-		EndX:      req.EndX,
-		StartY:    startY,
-		EndY:      endY,
-		World:     newWorld,
-		TurnCount: req.TurnCount,
-		Section:   req.Section,
-	}
 }
 
 // Create a new topic as a buffered channel.
@@ -72,23 +54,24 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 
 	fmt.Printf("Publishing request to topic: %s\n", topic)
 
-	heightPerWorker := request.EndY / len(workers)
 	var wg sync.WaitGroup
+	heightPerWorker := request.EndY / len(workers)
 
 	for i, workerAddress := range workers {
 		wg.Add(1)
 		startY := i * heightPerWorker
 		endY := (i + 1) * heightPerWorker
 		if i == len(workers)-1 {
-			endY = request.EndY // 最后一个 worker 处理到最后
+			endY = request.EndY
 		}
 
-		// 创建独立的 CalRequest 对象
-		workerReq := copyCalRequest(request, startY, endY)
+		req := request
+		req.StartY = startY
+		req.EndY = endY
 
 		go func(workerAddress string, req stdstruct.CalRequest, idx int) {
 			defer wg.Done()
-			fmt.Printf("Attempting to connect to worker: %s with StartY=%d, EndY=%d\n", workerAddress, req.StartY, req.EndY)
+			fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
 			client, err := rpc.Dial("tcp", workerAddress)
 			if err != nil {
 				fmt.Printf("Error connecting to worker %s: %v\n", workerAddress, err)
@@ -109,7 +92,7 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 			case <-time.After(2 * time.Second):
 				fmt.Printf("Timeout while waiting to write to response channel for worker %s\n", workerAddress)
 			}
-		}(workerAddress, workerReq, i)
+		}(workerAddress, req, i)
 	}
 
 	wg.Wait()
@@ -228,17 +211,15 @@ func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.Re
 
 	var finalAliveCells []stdstruct.Cell
 
-	for _, workerRes := range result {
-
-		fmt.Printf("Merging section StartY=%d, EndY=%d, StartX=%d, EndX=%d\n",
-			workerRes.StartY, workerRes.EndY, workerRes.StartX, workerRes.EndX)
-
-		for y := 0; y < workerRes.EndY-workerRes.StartY; y++ {
-			for x := 0; x < workerRes.EndX-workerRes.StartX; x++ {
-				finalWorld[workerRes.StartY+y][workerRes.StartX+x] = workerRes.World[y][x]
+	for _, res := range result {
+		subWorldHeight := res.EndY - res.StartY
+		subWorldWidth := res.EndX - res.StartX
+		for y := 0; y < subWorldHeight; y++ {
+			for x := 0; x < subWorldWidth; x++ {
+				finalWorld[res.StartY+y][res.StartX+x] = res.World[y][x]
 			}
 		}
-		finalAliveCells = append(finalAliveCells, workerRes.AliveCells...)
+		finalAliveCells = append(finalAliveCells, res.AliveCells...)
 	}
 	res.World = finalWorld
 	res.AliveCells = finalAliveCells

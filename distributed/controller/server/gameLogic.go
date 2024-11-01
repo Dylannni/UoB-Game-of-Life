@@ -1,10 +1,6 @@
 package server
 
-import (
-	"fmt"
-
-	"uk.ac.bris.cs/gameoflife/stdstruct"
-)
+import "uk.ac.bris.cs/gameoflife/stdstruct"
 
 //"uk.ac.bris.cs/gameoflife/stdstruct"
 
@@ -69,13 +65,6 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 }
 
 func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) ([][]byte, []stdstruct.Cell) {
-	if startY < 0 || endY > len(world) || startY > endY {
-		panic(fmt.Sprintf("Invalid StartY: %d, EndY: %d, WorldHeight: %d", startY, endY, len(world)))
-	}
-	if startX < 0 || endX > len(world[0]) || startX > endX {
-		panic(fmt.Sprintf("Invalid StartX: %d, EndX: %d, WorldWidth: %d", startX, endX, len(world[0])))
-	}
-
 	height := endY - startY
 	width := endX - startX
 
@@ -87,12 +76,14 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 	var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
-	for y := startY; y < height; y++ {
-		for x := startX; x < width; x++ {
-
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 			globalY := startY + y
 			globalX := startX + x
 			// Count the live neighbors
+			if globalY >= len(world) || globalX >= len(world[0]) {
+				continue
+			}
 			liveNeighbors := countLiveNeighbors(world, globalY, globalX, p.ImageHeight, p.ImageWidth)
 
 			// Apply the Game of Life rules
