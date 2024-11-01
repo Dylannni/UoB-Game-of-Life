@@ -229,15 +229,6 @@ func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.Re
 	var finalAliveCells []stdstruct.Cell
 
 	for _, workerRes := range result {
-		// 检查 StartY 和 EndY
-		if workerRes.StartY < 0 || workerRes.EndY > req.ImageHeight || workerRes.StartY > workerRes.EndY {
-			fmt.Printf("Invalid StartY: %d, EndY: %d for worker response\n", workerRes.StartY, workerRes.EndY)
-			continue
-		}
-		if workerRes.StartX < 0 || workerRes.EndX > req.ImageWidth || workerRes.StartX > workerRes.EndX {
-			fmt.Printf("Invalid StartX: %d, EndX: %d for worker response\n", workerRes.StartX, workerRes.EndX)
-			continue
-		}
 
 		fmt.Printf("Merging section StartY=%d, EndY=%d, StartX=%d, EndX=%d\n",
 			workerRes.StartY, workerRes.EndY, workerRes.StartX, workerRes.EndX)
