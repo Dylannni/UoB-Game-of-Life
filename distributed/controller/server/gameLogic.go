@@ -1,10 +1,6 @@
 package server
 
-import (
-	"fmt"
-
-	"uk.ac.bris.cs/gameoflife/stdstruct"
-)
+//"uk.ac.bris.cs/gameoflife/stdstruct"
 
 //"uk.ac.bris.cs/gameoflife/stdstruct"
 
@@ -66,7 +62,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) ([][]byte, []stdstruct.Cell) {
+func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) [][]byte {
 	height := endY - startY
 	width := endX - startX
 
@@ -75,7 +71,7 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 		newWorld[i] = make([]byte, width)
 	}
 
-	var aliveCells []stdstruct.Cell
+	//var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -85,9 +81,6 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(world, globalY, globalX, p.ImageHeight, p.ImageWidth)
 
-			// Debug: print live neighbors count for each cell
-			fmt.Printf("[DEBUG] Cell (%d, %d) has %d live neighbors\n", globalY, globalX, liveNeighbors)
-
 			// Apply the Game of Life rules
 			if world[globalY][globalX] == 255 {
 				// Cell is alive
@@ -95,18 +88,18 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 					newWorld[y][x] = 0 // Cell dies
 				} else {
 					newWorld[y][x] = 255 // Cell stays alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					//aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
 					newWorld[y][x] = 255 // Cell becomes alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					//aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				} else {
 					newWorld[y][x] = 0 // Cell stays dead
 				}
 			}
 		}
 	}
-	return newWorld, aliveCells
+	return newWorld
 }
