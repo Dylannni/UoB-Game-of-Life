@@ -116,9 +116,9 @@ func distributor(p Params, c distributorChannels) {
 		}
 
 		c.completedTurns = turn + 1
-
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
+		time.Sleep(2 * time.Second)
 		c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
 
 		select {
