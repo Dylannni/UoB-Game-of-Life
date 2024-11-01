@@ -24,7 +24,7 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
-	brokerAdr := "18.213.0.82:8030"
+	brokerAdr := "54.236.7.78:8030"
 
 	client, err := rpc.Dial("tcp", brokerAdr)
 
