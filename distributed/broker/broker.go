@@ -14,7 +14,7 @@ import (
 // store each topic task
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
-	responseCh = make(map[string]chan stdstruct.CalResponse)
+	responseCh = make(map[string]chan stdstruct.CalResponse, len(workers))
 	workers    = []string{"52.54.105.119:8031", "3.93.79.176:8032"}
 	topicmx    sync.RWMutex
 )
@@ -130,7 +130,7 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 
 	for i := 0; i < expectedResponses; i++ {
 		result := <-responseChannel
-		fmt.Printf("Received response for topic: %s\n", topic)
+		fmt.Printf("Received from worker %d response for topic: %s\n", i+1, topic)
 		res = append(res, result)
 	}
 	fmt.Printf("Finished collecting responses for topic: %s\n", topic)
