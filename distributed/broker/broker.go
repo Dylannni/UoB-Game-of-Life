@@ -15,7 +15,7 @@ import (
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
 	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
-	workers    = []string{"52.54.105.119:8031", "3.93.79.176:8032"}
+	workers    = []string{"3.85.22.253:8031", "52.87.242.13:8032"}
 	topicmx    sync.RWMutex
 )
 
