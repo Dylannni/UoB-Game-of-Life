@@ -14,7 +14,7 @@ import (
 // store each topic task
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
-	responseCh = make(map[string]chan stdstruct.CalResponse, len(workers))
+	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
 	workers    = []string{"52.54.105.119:8031", "3.93.79.176:8032"}
 	topicmx    sync.RWMutex
 )
@@ -26,7 +26,10 @@ func newTopic(topic string, buflen int) {
 	if _, ok := topics[topic]; !ok {
 		fmt.Printf("Creating new topic: %s with buffer length: %d\n", topic, buflen)
 		topics[topic] = make(chan stdstruct.CalRequest, buflen)
-		responseCh[topic] = make(chan stdstruct.CalResponse, buflen)
+		responseCh[topic] = make([]chan stdstruct.CalResponse, len(workers))
+		for i := range workers {
+			responseCh[topic][i] = make(chan stdstruct.CalResponse, 1)
+		}
 	}
 }
 
@@ -41,8 +44,8 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 		var wg sync.WaitGroup
 		wg.Add(len(workers))
 
-		for _, workerAddress := range workers {
-			go func(workerAddress string, req stdstruct.CalRequest) {
+		for i, workerAddress := range workers {
+			go func(workerAddress string, req stdstruct.CalRequest, idx int) {
 				defer wg.Done()
 
 				fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
@@ -59,13 +62,10 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 					return
 				}
 				topicmx.RLock()
-				responseChannel, exists := responseCh[topic]
+				responseChannel := responseCh[topic][idx]
 				topicmx.RUnlock()
-				if exists {
-					fmt.Printf("Publishing response from worker %s to response channel for topic: %s\n", workerAddress, topic)
-					responseChannel <- *response
-				}
-			}(workerAddress, request)
+				responseChannel <- *response
+			}(workerAddress, request, i)
 		}
 		wg.Wait()
 	} else {
@@ -129,7 +129,7 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	fmt.Printf("Expecting %d responses for topic: %s\n", expectedResponses, topic)
 
 	for i := 0; i < expectedResponses; i++ {
-		result := <-responseChannel
+		result := <-responseChannel[i]
 		fmt.Printf("Received from worker %d response for topic: %s\n", i+1, topic)
 		res = append(res, result)
 	}
