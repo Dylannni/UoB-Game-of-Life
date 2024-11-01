@@ -38,8 +38,13 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 		fmt.Printf("Publishing request to topic: %s\n", topic)
 		ch <- request
 
+		var wg sync.WaitGroup
+		wg.Add(len(workers))
+
 		for _, workerAddress := range workers {
 			go func(workerAddress string, req stdstruct.CalRequest) {
+				defer wg.Done()
+
 				fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
 				client, err := rpc.Dial("tcp", workerAddress)
 				if err != nil {
@@ -62,6 +67,7 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 				}
 			}(workerAddress, request)
 		}
+		wg.Wait()
 	} else {
 		fmt.Printf("Topic %s not found\n", topic)
 	}
