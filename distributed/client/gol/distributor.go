@@ -97,7 +97,9 @@ func distributor(p Params, c distributorChannels) {
 		// collect results
 		var resultRes stdstruct.ResultResponse
 		resultReq := stdstruct.ResultRequest{
-			Topic: "game of life task",
+			Topic:       "game of life task",
+			ImageHeight: p.ImageHeight,
+			ImageWidth:  p.ImageWidth,
 		}
 		err := client.Call("Broker.CollectResponses", resultReq, &resultRes)
 		if err != nil {
@@ -105,16 +107,9 @@ func distributor(p Params, c distributorChannels) {
 			return
 		}
 
-		// put results into world and update
-		for _, res := range resultRes.Results {
-			for y := res.StartY; y < res.EndY; y++ {
-				for x := res.StartX; x < res.EndX; x++ {
-					world[y][x] = res.World[y][x]
-				}
-			}
-			for _, cell := range res.AliveCells {
-				c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
-			}
+		world = resultRes.World
+		for _, cell := range resultRes.AliveCells {
+			c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
 		}
 
 		c.completedTurns = turn + 1

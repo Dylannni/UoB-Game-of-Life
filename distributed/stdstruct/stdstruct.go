@@ -65,9 +65,13 @@ type PublishRequest struct {
 }
 
 type ResultRequest struct {
-	Topic string
+	Topic       string
+	ImageHeight int
+	ImageWidth  int
 }
 type ResultResponse struct {
-	Status  string
-	Results []CalResponse
+	Status     string
+	World      [][]byte
+	Results    []CalResponse
+	AliveCells []Cell
 }

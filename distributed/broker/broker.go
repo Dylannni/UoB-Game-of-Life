@@ -19,6 +19,14 @@ var (
 	topicmx    sync.RWMutex
 )
 
+func InitWorld(height, width int) [][]byte {
+	world := make([][]byte, height)
+	for i := range world {
+		world[i] = make([]byte, width)
+	}
+	return world
+}
+
 // Create a new topic as a buffered channel.
 func newTopic(topic string, buflen int) {
 	topicmx.Lock()
@@ -129,19 +137,23 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	expectedResponses := len(workers)
 	fmt.Printf("Expecting %d responses for topic: %s\n", expectedResponses, topic)
 
-	receivedResponses := 0
-	for receivedResponses < expectedResponses {
-		for i := 0; i < len(responseChannel); i++ {
-			select {
-			case result := <-responseChannel[i]:
-				fmt.Printf("Received from worker %d response for topic: %s\n", i+1, topic)
-				res = append(res, result)
-				receivedResponses++
-			default:
-				// Allow other responses to be received concurrently
-			}
-		}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	wg.Add(expectedResponses)
+
+	for i := 0; i < expectedResponses; i++ {
+		go func(i int) {
+			defer wg.Done()
+			result := <-responseChannel[i] // Blocking until response is received
+
+			mu.Lock() // Lock to safely append to the result slice
+			res = append(res, result)
+			mu.Unlock()
+
+			fmt.Printf("Received response from worker %d for topic: %s\n", i+1, topic)
+		}(i)
 	}
+	wg.Wait()
 	fmt.Printf("Finished collecting responses for topic: %s\n", topic)
 	return res, nil
 }
@@ -172,7 +184,23 @@ func (b *Broker) Publish(req stdstruct.PublishRequest, res *stdstruct.Status) (e
 func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.ResultResponse) (err error) {
 	fmt.Printf("Received request to collect responses for topic: %s\n", req.Topic)
 	result, _ := collectResponses(req.Topic)
+
+	finalWorld := InitWorld(req.ImageHeight, req.ImageWidth)
+
+	var finalAliveCells []stdstruct.Cell
+
+	for _, res := range result {
+		for y := res.StartY; y < res.EndY; y++ {
+			for x := res.StartX; x < res.EndX; x++ {
+				finalWorld[y][x] = res.World[y][x]
+			}
+		}
+		finalAliveCells = append(finalAliveCells, res.AliveCells...)
+	}
+	res.World = finalWorld
+	res.AliveCells = finalAliveCells
 	res.Results = result
+
 	return nil
 
 }

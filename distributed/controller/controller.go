@@ -26,17 +26,17 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 		ImageHeight: req.EndY,
 		ImageWidth:  req.EndX,
 	}
-	world := server.InitWorld(req.EndY, req.EndX)
+	world := req.World
 	for y := 0; y < req.EndY; y++ {
 		for x := 0; x < req.EndX; x++ {
 			world[y][x] = req.World[y][x]
 		}
 	}
 	fmt.Println("[DEBUG] Starting CalculateNextState")
-	nextSate := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
+	nextSate, aliveCells := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
 
 	res.World = nextSate
-	//res.AliveCells= alivecells
+	res.AliveCells = aliveCells
 	fmt.Println("[DEBUG] Completed CalculateNextTurn")
 	return nil
 }
