@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"strings"
 	"sync"
 	"time"
 
@@ -252,7 +253,20 @@ func (b *Broker) ShutDownBroker(req stdstruct.ShutRequest, res stdstruct.ShutRes
 }
 func main() {
 	pAddr := flag.String("port", "8030", "Port to listen on")
+	workerList := flag.String("workers", "", "Comma-separated list of worker addresses")
 	flag.Parse()
+
+	workers = strings.Split(*workerList, ",")
+	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
+
+	// 初始化 responseCh for existing topics
+	for topic := range topics {
+		responseCh[topic] = make([]chan stdstruct.CalResponse, len(workers))
+		for i := range workers {
+			responseCh[topic][i] = make(chan stdstruct.CalResponse, 10) // 调整缓冲区大小根据需要
+		}
+	}
+
 	broker := &Broker{shutdownChan: make(chan struct{})}
 
 	rpc.Register(broker)
