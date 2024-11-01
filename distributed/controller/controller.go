@@ -49,6 +49,7 @@ func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutRes
 
 func main() {
 	workerPort := flag.String("port", "8031", "Worker port to listen on")
+	flag.Parse()
 	fmt.Println("[DEBUG] Registering GameOfLife RPC service")
 	rpc.Register(&GameOfLife{})
 	listener, err := net.Listen("tcp", ":"+*workerPort)
