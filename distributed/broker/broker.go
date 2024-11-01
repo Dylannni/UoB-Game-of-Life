@@ -16,7 +16,7 @@ import (
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
 	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
-	workers    = []string{"100.27.228.161:8031", "3.84.31.117:8032"}
+	workers    []string
 	topicmx    sync.RWMutex
 )
 
@@ -42,6 +42,24 @@ func newTopic(topic string, buflen int) {
 	}
 }
 
+func CopyCalRequest(req stdstruct.CalRequest, startY, endY int) stdstruct.CalRequest {
+	newWorld := make([][]byte, len(req.World))
+	for i := range req.World {
+		newWorld[i] = make([]byte, len(req.World[i]))
+		copy(newWorld[i], req.World[i])
+	}
+
+	return stdstruct.CalRequest{
+		StartX:    req.StartX,
+		EndX:      req.EndX,
+		StartY:    startY,
+		EndY:      endY,
+		World:     newWorld,
+		TurnCount: req.TurnCount,
+		Section:   req.Section,
+	}
+}
+
 // add task to the specific Topic task queue
 func publish(topic string, request stdstruct.CalRequest) (err error) {
 	topicmx.RLock()
@@ -64,10 +82,7 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 		if i == len(workers)-1 {
 			endY = request.EndY
 		}
-
-		req := request
-		req.StartY = startY
-		req.EndY = endY
+		workerReq := CopyCalRequest(request, startY, endY)
 
 		go func(workerAddress string, req stdstruct.CalRequest, idx int) {
 			defer wg.Done()
@@ -92,7 +107,7 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 			case <-time.After(2 * time.Second):
 				fmt.Printf("Timeout while waiting to write to response channel for worker %s\n", workerAddress)
 			}
-		}(workerAddress, req, i)
+		}(workerAddress, workerReq, i)
 	}
 
 	wg.Wait()
