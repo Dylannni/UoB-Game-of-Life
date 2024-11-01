@@ -112,6 +112,9 @@ func distributor(p Params, c distributorChannels) {
 					world[y][x] = res.World[y][x]
 				}
 			}
+			for _, cell := range res.AliveCells {
+				c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+			}
 		}
 
 		c.completedTurns = turn + 1

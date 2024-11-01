@@ -33,9 +33,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 		}
 	}
 	fmt.Println("[DEBUG] Starting CalculateNextState")
-	nextSate := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
+	nextSate, aliveCells := server.CalculateNextState(req.StartY, req.EndY, 0, req.EndX, p, world)
 
 	res.World = nextSate
+	res.AliveCells = aliveCells
 	fmt.Println("[DEBUG] Completed CalculateNextTurn")
 	return nil
 }
