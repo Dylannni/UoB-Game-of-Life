@@ -51,7 +51,6 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 	}
-	c.events <- AliveCellsCount{0, len(calculateAliveCells(p, world))}
 
 	turn := 0
 	c.events <- StateChange{turn, Executing}
@@ -108,7 +107,6 @@ func distributor(p Params, c distributorChannels) {
 			fmt.Println("Error publishing request to broker:", err)
 			return
 		}
-		c.events <- AliveCellsCount{turn + 1, len(resultRes.AliveCells)}
 
 		world = resultRes.World
 		for _, cell := range resultRes.AliveCells {
