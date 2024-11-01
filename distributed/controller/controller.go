@@ -23,32 +23,14 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 	p := server.Params{
 		Turns:       0,
 		Threads:     0,
-		ImageHeight: req.EndY - req.StartY,
-		ImageWidth:  req.EndX - req.StartX,
-	}
-	subWorldHeight := req.EndY - req.StartY
-	subWorldWidth := req.EndX - req.StartX
-
-	subWorld := make([][]byte, subWorldHeight)
-	for i := range subWorld {
-		subWorld[i] = make([]byte, subWorldWidth)
-		for j := 0; j < subWorldWidth; j++ {
-			subWorld[i][j] = req.World[req.StartY+i][req.StartX+j]
-		}
+		ImageHeight: len(req.World),
+		ImageWidth:  len(req.World[0]),
 	}
 	fmt.Println("[DEBUG] Starting CalculateNextState")
-	nextSate, aliveCells := server.CalculateNextState(0, subWorldHeight, 0, subWorldWidth, p, subWorld)
+	nextSate, aliveCells := server.CalculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, p, req.World)
 
-	res.World = nextSate
-	res.AliveCells = make([]stdstruct.Cell, len(aliveCells))
-
-	//Update alive cell positions to the global coordinates
-	for i, cell := range aliveCells {
-		res.AliveCells[i] = stdstruct.Cell{
-			X: req.StartX + cell.X,
-			Y: req.StartY + cell.Y,
-		}
-	}
+	req.World = nextSate
+	res.AliveCells = aliveCells
 	res.StartX = req.StartX
 	res.EndX = req.EndX
 	res.StartY = req.StartY

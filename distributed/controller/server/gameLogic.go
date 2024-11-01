@@ -76,32 +76,28 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 	var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			globalY := startY + y
-			globalX := startX + x
+	for y := 0; y < endY; y++ {
+		for x := 0; x < endX; x++ {
+
 			// Count the live neighbors
-			if globalY >= len(world) || globalX >= len(world[0]) {
-				continue
-			}
-			liveNeighbors := countLiveNeighbors(world, globalY, globalX, p.ImageHeight, p.ImageWidth)
+			liveNeighbors := countLiveNeighbors(world, y, x, p.ImageHeight, p.ImageWidth)
 
 			// Apply the Game of Life rules
-			if world[globalY][globalX] == 255 {
+			if world[y][x] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
-					newWorld[y][x] = 0 // Cell dies
+					newWorld[y-startY][x-startX] = 0 // Cell dies
 				} else {
-					newWorld[y][x] = 255 // Cell stays alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					newWorld[y-startY][x-startX] = 255 // Cell stays alive
+					aliveCells = append(aliveCells, stdstruct.Cell{X: x, Y: x})
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
-					newWorld[y][x] = 255 // Cell becomes alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					newWorld[y-startY][x-startX] = 255 // Cell becomes alive
+					aliveCells = append(aliveCells, stdstruct.Cell{X: x, Y: x})
 				} else {
-					newWorld[y][x] = 0 // Cell stays dead
+					newWorld[y-startY][x-endX] = 0 // Cell stays dead
 				}
 			}
 		}
