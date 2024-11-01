@@ -61,6 +61,6 @@ func main() {
 	defer listener.Close()
 	fmt.Println("Worker is listening on port", *workerPort)
 	fmt.Println("[DEBUG] Waiting for incoming connections...")
-	go rpc.Accept(listener)
+	rpc.Accept(listener)
 
 }
