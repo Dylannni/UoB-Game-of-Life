@@ -1,7 +1,5 @@
 package server
 
-import "uk.ac.bris.cs/gameoflife/stdstruct"
-
 //"uk.ac.bris.cs/gameoflife/stdstruct"
 
 //"uk.ac.bris.cs/gameoflife/stdstruct"
@@ -64,7 +62,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) ([][]byte, []stdstruct.Cell) {
+func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte) [][]byte {
 	height := endY - startY
 	width := endX - startX
 
@@ -73,7 +71,7 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 		newWorld[i] = make([]byte, width)
 	}
 
-	var aliveCells []stdstruct.Cell
+	//var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -93,18 +91,18 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 					newWorld[y][x] = 0 // Cell dies
 				} else {
 					newWorld[y][x] = 255 // Cell stays alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					//aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
 					newWorld[y][x] = 255 // Cell becomes alive
-					aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					//aliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				} else {
 					newWorld[y][x] = 0 // Cell stays dead
 				}
 			}
 		}
 	}
-	return newWorld, aliveCells
+	return newWorld
 }

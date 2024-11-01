@@ -111,20 +111,28 @@ func distributor(p Params, c distributorChannels) {
 		}
 
 		world = resultRes.World
-		for _, cell := range resultRes.AliveCells {
-			c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+		// for _, cell := range resultRes.AliveCells {
+		// 	c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+		// }
+		for y := 0; y < p.ImageHeight; y++ {
+			for x := 0; x < p.ImageWidth; x++ {
+				if world[y][x] == 255 {
+					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: x, Y: y}}
+				}
+			}
 		}
 
 		c.completedTurns = turn + 1
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		time.Sleep(2 * time.Second)
-		c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
+		c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 
 		select {
 		// ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
-			c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
+			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+
 		case key := <-c.keyPresses:
 			switch key {
 			case 's':
