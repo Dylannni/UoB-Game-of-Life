@@ -36,42 +36,43 @@ func newTopic(topic string, buflen int) {
 // add task to the specific Topic task queue
 func publish(topic string, request stdstruct.CalRequest) (err error) {
 	topicmx.RLock()
-	defer topicmx.RUnlock()
-	if ch, ok := topics[topic]; ok {
-		fmt.Printf("Publishing request to topic: %s\n", topic)
-		ch <- request
-
-		var wg sync.WaitGroup
-		wg.Add(len(workers))
-
-		for i, workerAddress := range workers {
-			go func(workerAddress string, req stdstruct.CalRequest, idx int) {
-				defer wg.Done()
-
-				fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
-				client, err := rpc.Dial("tcp", workerAddress)
-				if err != nil {
-					fmt.Printf("Error connecting to worker %s: %v\n", workerAddress, err)
-					return
-				}
-				defer client.Close()
-				response := new(stdstruct.CalResponse)
-				err = client.Call("GameOfLife.CalculateNextTurn", req, response)
-				if err != nil {
-					fmt.Printf("Error during worker calculation at %s: %v\n", workerAddress, err)
-					return
-				}
-				topicmx.RLock()
-				responseChannel := responseCh[topic][idx]
-				topicmx.RUnlock()
-				responseChannel <- *response
-			}(workerAddress, request, i)
-		}
-		wg.Wait()
-	} else {
+	responseChannels, ok := responseCh[topic]
+	topicmx.RUnlock()
+	if !ok {
 		fmt.Printf("Topic %s not found\n", topic)
+		return errors.New("topic not found")
 	}
-	return
+
+	fmt.Printf("Publishing request to topic: %s\n", topic)
+
+	var wg sync.WaitGroup
+	wg.Add(len(workers))
+
+	for i, workerAddress := range workers {
+		go func(workerAddress string, req stdstruct.CalRequest, idx int) {
+			defer wg.Done()
+
+			fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
+			client, err := rpc.Dial("tcp", workerAddress)
+			if err != nil {
+				fmt.Printf("Error connecting to worker %s: %v\n", workerAddress, err)
+				return
+			}
+			defer client.Close()
+
+			response := new(stdstruct.CalResponse)
+			err = client.Call("GameOfLife.CalculateNextTurn", req, response)
+			if err != nil {
+				fmt.Printf("Error during worker calculation at %s: %v\n", workerAddress, err)
+				return
+			}
+
+			responseChannels[idx] <- *response
+		}(workerAddress, request, i)
+	}
+
+	wg.Wait()
+	return nil
 }
 
 // // The task is continuously fetched from the specified topic channel, processed, and the result is sent to the server through RPC.
@@ -128,10 +129,18 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	expectedResponses := len(workers)
 	fmt.Printf("Expecting %d responses for topic: %s\n", expectedResponses, topic)
 
-	for i := 0; i < expectedResponses; i++ {
-		result := <-responseChannel[i]
-		fmt.Printf("Received from worker %d response for topic: %s\n", i+1, topic)
-		res = append(res, result)
+	receivedResponses := 0
+	for receivedResponses < expectedResponses {
+		for i := 0; i < len(responseChannel); i++ {
+			select {
+			case result := <-responseChannel[i]:
+				fmt.Printf("Received from worker %d response for topic: %s\n", i+1, topic)
+				res = append(res, result)
+				receivedResponses++
+			default:
+				// Allow other responses to be received concurrently
+			}
+		}
 	}
 	fmt.Printf("Finished collecting responses for topic: %s\n", topic)
 	return res, nil
