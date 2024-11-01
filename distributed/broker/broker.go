@@ -125,17 +125,16 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 		fmt.Printf("Response channel for topic %s not found\n", topic)
 		return nil, errors.New("not found")
 	}
-	fmt.Printf("Response channel for topic %s not found\n", topic)
-	for {
-		select {
-		case result := <-responseChannel:
-			fmt.Printf("Received response for topic: %s\n", topic)
-			res = append(res, result)
-		default:
-			fmt.Printf("Finished collecting responses for topic: %s\n", topic)
-			return res, nil
-		}
+	expectedResponses := len(workers)
+	fmt.Printf("Expecting %d responses for topic: %s\n", expectedResponses, topic)
+
+	for i := 0; i < expectedResponses; i++ {
+		result := <-responseChannel
+		fmt.Printf("Received response for topic: %s\n", topic)
+		res = append(res, result)
 	}
+	fmt.Printf("Finished collecting responses for topic: %s\n", topic)
+	return res, nil
 }
 
 type Broker struct {
