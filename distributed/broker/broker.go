@@ -55,12 +55,22 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 	fmt.Printf("Publishing request to topic: %s\n", topic)
 
 	var wg sync.WaitGroup
-	wg.Add(len(workers))
+	heightPerWorker := request.EndY / len(workers)
 
 	for i, workerAddress := range workers {
+		wg.Add(1)
+		startY := i * heightPerWorker
+		endY := (i + 1) * heightPerWorker
+		if i == len(workers)-1 {
+			endY = request.EndY // 最后一个 worker 处理到最后
+		}
+
+		req := request
+		req.StartY = startY
+		req.EndY = endY
+
 		go func(workerAddress string, req stdstruct.CalRequest, idx int) {
 			defer wg.Done()
-
 			fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
 			client, err := rpc.Dial("tcp", workerAddress)
 			if err != nil {
@@ -80,8 +90,9 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 			case responseChannels[idx] <- *response:
 				// Successfully written to channel
 			case <-time.After(2 * time.Second):
+				fmt.Printf("Timeout while waiting to write to response channel for worker %s\n", workerAddress)
 			}
-		}(workerAddress, request, i)
+		}(workerAddress, req, i)
 	}
 
 	wg.Wait()
