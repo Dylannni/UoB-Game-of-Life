@@ -38,6 +38,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 
 	res.World = nextSate
 	res.AliveCells = aliveCells
+	res.StartX = req.StartX
+	res.EndX = req.EndX
+	res.StartY = req.StartY
+	res.EndY = req.EndY
 	fmt.Println("[DEBUG] Completed CalculateNextTurn")
 	return nil
 }

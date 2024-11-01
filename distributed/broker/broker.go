@@ -193,9 +193,11 @@ func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.Re
 	var finalAliveCells []stdstruct.Cell
 
 	for _, res := range result {
-		for y := res.StartY; y < res.EndY; y++ {
-			for x := res.StartX; x < res.EndX; x++ {
-				finalWorld[y][x] = res.World[y][x]
+		subWorldHeight := res.EndY - res.StartY
+		subWorldWidth := res.EndX - res.StartX
+		for y := 0; y < subWorldHeight; y++ {
+			for x := 0; x < subWorldWidth; x++ {
+				finalWorld[res.StartY+y][res.StartX+x] = res.World[y][x]
 			}
 		}
 		finalAliveCells = append(finalAliveCells, res.AliveCells...)
