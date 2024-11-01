@@ -76,8 +76,8 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 	var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
-	for y := 0; y < endY; y++ {
-		for x := 0; x < endX; x++ {
+	for y := startY; y < endY; y++ {
+		for x := startX; x < endX; x++ {
 
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(world, y, x, p.ImageHeight, p.ImageWidth)
