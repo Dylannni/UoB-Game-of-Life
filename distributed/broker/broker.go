@@ -37,7 +37,7 @@ func newTopic(topic string, buflen int) {
 		topics[topic] = make(chan stdstruct.CalRequest, buflen)
 		responseCh[topic] = make([]chan stdstruct.CalResponse, len(workers))
 		for i := range workers {
-			responseCh[topic][i] = make(chan stdstruct.CalResponse, len(workers))
+			responseCh[topic][i] = make(chan stdstruct.CalResponse, buflen)
 		}
 	}
 }
@@ -76,7 +76,11 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 				return
 			}
 
-			responseChannels[idx] <- *response
+			select {
+			case responseChannels[idx] <- *response:
+				// Successfully written to channel
+			case <-time.After(2 * time.Second):
+			}
 		}(workerAddress, request, i)
 	}
 
@@ -145,14 +149,18 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	for i := 0; i < expectedResponses; i++ {
 		go func(i int) {
 			defer wg.Done()
-			select {
-			case result := <-responseChannel[i]:
-				mu.Lock() // Lock to safely append to the result slice
-				res = append(res, result)
-				mu.Unlock()
-				fmt.Printf("Received response from worker %d for topic: %s\n", i+1, topic)
-			case <-time.After(5 * time.Second):
-				fmt.Printf("Timeout waiting for response from worker %d\n", i+1)
+			retries := 3
+			for r := 0; r < retries; r++ {
+				select {
+				case result := <-responseChannel[i]:
+					mu.Lock() // Lock to safely append to the result slice
+					res = append(res, result)
+					mu.Unlock()
+					fmt.Printf("Received response from worker %d for topic: %s\n", i+1, topic)
+					return
+				case <-time.After(5 * time.Second):
+					fmt.Printf("Timeout waiting for response from worker %d, retrying...\n", i+1)
+				}
 			}
 		}(i)
 	}
