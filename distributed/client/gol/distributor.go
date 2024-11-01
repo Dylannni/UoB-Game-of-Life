@@ -67,35 +67,33 @@ func distributor(p Params, c distributorChannels) {
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		heightPerThread := p.ImageHeight / p.Threads
+		//heightPerThread := p.ImageHeight / p.Threads
 
-		for i := 0; i < p.Threads; i++ {
-			startY := i * heightPerThread
-			endY := (i + 1) * heightPerThread
-			if i == p.Threads-1 {
-				endY = p.ImageHeight
-			}
+		// for i := 0; i < p.Threads; i++ {
+		// 	startY := i * heightPerThread
+		// 	endY := (i + 1) * heightPerThread
+		// 	if i == p.Threads-1 {
+		// 		endY = p.ImageHeight
+		// 	}
 
-			// prepare request for server, the task are seperated into smaller one
-			req := stdstruct.CalRequest{
-				StartX:    0,
-				EndX:      p.ImageWidth,
-				StartY:    startY,
-				EndY:      endY,
-				World:     world,
-				TurnCount: turn,
-				Section:   i,
-			}
-
-			// publish task
-			var publishRes stdstruct.Status
-			publishReq := stdstruct.PublishRequest{
-				Topic:   "game of life task",
-				Request: req,
-			}
-			client.Call("Broker.Publish", publishReq, &publishRes)
-
+		// prepare request for server, the task are seperated into smaller one
+		req := stdstruct.CalRequest{
+			StartX:    0,
+			EndX:      p.ImageWidth,
+			StartY:    0,
+			EndY:      p.ImageHeight,
+			World:     world,
+			TurnCount: turn,
+			Section:   0,
 		}
+
+		// publish task
+		var publishRes stdstruct.Status
+		publishReq := stdstruct.PublishRequest{
+			Topic:   "game of life task",
+			Request: req,
+		}
+		client.Call("Broker.Publish", publishReq, &publishRes)
 
 		// collect results
 		var resultRes stdstruct.ResultResponse

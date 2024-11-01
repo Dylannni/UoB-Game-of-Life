@@ -28,6 +28,24 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
+func copyCalRequest(req stdstruct.CalRequest, startY, endY int) stdstruct.CalRequest {
+	newWorld := make([][]byte, len(req.World))
+	for i := range req.World {
+		newWorld[i] = make([]byte, len(req.World[i]))
+		copy(newWorld[i], req.World[i])
+	}
+
+	return stdstruct.CalRequest{
+		StartX:    req.StartX,
+		EndX:      req.EndX,
+		StartY:    startY,
+		EndY:      endY,
+		World:     newWorld,
+		TurnCount: req.TurnCount,
+		Section:   req.Section,
+	}
+}
+
 // Create a new topic as a buffered channel.
 func newTopic(topic string, buflen int) {
 	topicmx.Lock()
@@ -54,8 +72,8 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 
 	fmt.Printf("Publishing request to topic: %s\n", topic)
 
-	var wg sync.WaitGroup
 	heightPerWorker := request.EndY / len(workers)
+	var wg sync.WaitGroup
 
 	for i, workerAddress := range workers {
 		wg.Add(1)
@@ -65,13 +83,12 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 			endY = request.EndY // 最后一个 worker 处理到最后
 		}
 
-		req := request
-		req.StartY = startY
-		req.EndY = endY
+		// 创建独立的 CalRequest 对象
+		workerReq := copyCalRequest(request, startY, endY)
 
 		go func(workerAddress string, req stdstruct.CalRequest, idx int) {
 			defer wg.Done()
-			fmt.Printf("Attempting to connect to worker: %s\n", workerAddress)
+			fmt.Printf("Attempting to connect to worker: %s with StartY=%d, EndY=%d\n", workerAddress, req.StartY, req.EndY)
 			client, err := rpc.Dial("tcp", workerAddress)
 			if err != nil {
 				fmt.Printf("Error connecting to worker %s: %v\n", workerAddress, err)
@@ -92,7 +109,7 @@ func publish(topic string, request stdstruct.CalRequest) (err error) {
 			case <-time.After(2 * time.Second):
 				fmt.Printf("Timeout while waiting to write to response channel for worker %s\n", workerAddress)
 			}
-		}(workerAddress, req, i)
+		}(workerAddress, workerReq, i)
 	}
 
 	wg.Wait()
@@ -211,13 +228,26 @@ func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.Re
 
 	var finalAliveCells []stdstruct.Cell
 
-	for _, res := range result {
-		for y := 0; y < res.EndY-res.StartY; y++ {
-			for x := 0; x < res.EndX-res.StartX; x++ {
-				finalWorld[res.StartY+y][res.StartX+x] = res.World[y][x]
+	for _, workerRes := range result {
+		// 检查 StartY 和 EndY
+		if workerRes.StartY < 0 || workerRes.EndY > req.ImageHeight || workerRes.StartY > workerRes.EndY {
+			fmt.Printf("Invalid StartY: %d, EndY: %d for worker response\n", workerRes.StartY, workerRes.EndY)
+			continue
+		}
+		if workerRes.StartX < 0 || workerRes.EndX > req.ImageWidth || workerRes.StartX > workerRes.EndX {
+			fmt.Printf("Invalid StartX: %d, EndX: %d for worker response\n", workerRes.StartX, workerRes.EndX)
+			continue
+		}
+
+		fmt.Printf("Merging section StartY=%d, EndY=%d, StartX=%d, EndX=%d\n",
+			workerRes.StartY, workerRes.EndY, workerRes.StartX, workerRes.EndX)
+
+		for y := 0; y < workerRes.EndY-workerRes.StartY; y++ {
+			for x := 0; x < workerRes.EndX-workerRes.StartX; x++ {
+				finalWorld[workerRes.StartY+y][workerRes.StartX+x] = workerRes.World[y][x]
 			}
 		}
-		finalAliveCells = append(finalAliveCells, res.AliveCells...)
+		finalAliveCells = append(finalAliveCells, workerRes.AliveCells...)
 	}
 	res.World = finalWorld
 	res.AliveCells = finalAliveCells

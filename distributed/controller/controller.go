@@ -20,6 +20,12 @@ type GameOfLife struct{}
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
 	fmt.Println("[DEBUG] Received CalculateNextTurn request")
+	if req.StartY < 0 || req.EndY > len(req.World) || req.StartY > req.EndY {
+		panic(fmt.Sprintf("Invalid StartY: %d, EndY: %d, WorldHeight: %d", req.StartY, req.EndY, len(req.World)))
+	}
+	if req.StartX < 0 || req.EndX > len(req.World[0]) || req.StartX > req.EndX {
+		panic(fmt.Sprintf("Invalid StartX: %d, EndX: %d, WorldWidth: %d", req.StartX, req.EndX, len(req.World[0])))
+	}
 	p := server.Params{
 		Turns:       0,
 		Threads:     0,
