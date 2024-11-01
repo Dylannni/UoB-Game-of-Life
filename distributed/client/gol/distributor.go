@@ -51,6 +51,7 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 	}
+	c.events <- AliveCellsCount{CompletedTurns: 0, CellsCount: len(calculateAliveCells(p, world))}
 
 	turn := 0
 	c.events <- StateChange{turn, Executing}
