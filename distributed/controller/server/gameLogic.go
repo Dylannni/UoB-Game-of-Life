@@ -81,6 +81,9 @@ func CalculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 			globalY := startY + y
 			globalX := startX + x
 			// Count the live neighbors
+			if globalY >= len(world) || globalX >= len(world[0]) {
+				continue
+			}
 			liveNeighbors := countLiveNeighbors(world, globalY, globalX, p.ImageHeight, p.ImageWidth)
 
 			// Apply the Game of Life rules
