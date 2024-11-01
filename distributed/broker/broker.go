@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"sync"
+	"time"
 
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
@@ -36,7 +37,7 @@ func newTopic(topic string, buflen int) {
 		topics[topic] = make(chan stdstruct.CalRequest, buflen)
 		responseCh[topic] = make([]chan stdstruct.CalResponse, len(workers))
 		for i := range workers {
-			responseCh[topic][i] = make(chan stdstruct.CalResponse, 1)
+			responseCh[topic][i] = make(chan stdstruct.CalResponse, len(workers))
 		}
 	}
 }
@@ -144,13 +145,15 @@ func collectResponses(topic string) (res []stdstruct.CalResponse, err error) {
 	for i := 0; i < expectedResponses; i++ {
 		go func(i int) {
 			defer wg.Done()
-			result := <-responseChannel[i] // Blocking until response is received
-
-			mu.Lock() // Lock to safely append to the result slice
-			res = append(res, result)
-			mu.Unlock()
-
-			fmt.Printf("Received response from worker %d for topic: %s\n", i+1, topic)
+			select {
+			case result := <-responseChannel[i]:
+				mu.Lock() // Lock to safely append to the result slice
+				res = append(res, result)
+				mu.Unlock()
+				fmt.Printf("Received response from worker %d for topic: %s\n", i+1, topic)
+			case <-time.After(5 * time.Second):
+				fmt.Printf("Timeout waiting for response from worker %d\n", i+1)
+			}
 		}(i)
 	}
 	wg.Wait()
