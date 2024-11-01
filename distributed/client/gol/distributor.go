@@ -51,8 +51,8 @@ func distributor(p Params, c distributorChannels) {
 			}
 		}
 	}
-	//time.Sleep(2 * time.Second)
-	//c.events <- AliveCellsCount{CompletedTurns: 0, CellsCount: len(calculateAliveCells(p, world))}
+	time.Sleep(2 * time.Second)
+	c.events <- AliveCellsCount{CompletedTurns: 0, CellsCount: len(calculateAliveCells(p, world))}
 
 	turn := 0
 	c.events <- StateChange{turn, Executing}
@@ -67,33 +67,35 @@ func distributor(p Params, c distributorChannels) {
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		//heightPerThread := p.ImageHeight / p.Threads
+		heightPerThread := p.ImageHeight / p.Threads
 
-		// for i := 0; i < p.Threads; i++ {
-		// 	startY := i * heightPerThread
-		// 	endY := (i + 1) * heightPerThread
-		// 	if i == p.Threads-1 {
-		// 		endY = p.ImageHeight
-		// 	}
+		for i := 0; i < p.Threads; i++ {
+			startY := i * heightPerThread
+			endY := (i + 1) * heightPerThread
+			if i == p.Threads-1 {
+				endY = p.ImageHeight
+			}
 
-		// prepare request for server, the task are seperated into smaller one
-		req := stdstruct.CalRequest{
-			StartX:    0,
-			EndX:      p.ImageWidth,
-			StartY:    0,
-			EndY:      p.ImageHeight,
-			World:     world,
-			TurnCount: turn,
-			Section:   0,
+			// prepare request for server, the task are seperated into smaller one
+			req := stdstruct.CalRequest{
+				StartX:    0,
+				EndX:      p.ImageWidth,
+				StartY:    startY,
+				EndY:      endY,
+				World:     world,
+				TurnCount: turn,
+				Section:   i,
+			}
+
+			// publish task
+			var publishRes stdstruct.Status
+			publishReq := stdstruct.PublishRequest{
+				Topic:   "game of life task",
+				Request: req,
+			}
+			client.Call("Broker.Publish", publishReq, &publishRes)
+
 		}
-
-		// publish task
-		var publishRes stdstruct.Status
-		publishReq := stdstruct.PublishRequest{
-			Topic:   "game of life task",
-			Request: req,
-		}
-		client.Call("Broker.Publish", publishReq, &publishRes)
 
 		// collect results
 		var resultRes stdstruct.ResultResponse
@@ -109,20 +111,27 @@ func distributor(p Params, c distributorChannels) {
 		}
 
 		world = resultRes.World
-		for _, cell := range resultRes.AliveCells {
-			c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+		// for _, cell := range resultRes.AliveCells {
+		// 	c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+		// }
+		for y := 0; y < p.ImageHeight; y++ {
+			for x := 0; x < p.ImageWidth; x++ {
+				if world[y][x] == 255 {
+					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: x, Y: y}}
+				}
+			}
 		}
 
 		c.completedTurns = turn + 1
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
-		//time.Sleep(2 * time.Second)
-		c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
+		time.Sleep(2 * time.Second)
+		c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 
 		select {
 		// ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
-			c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
+			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 
 		case key := <-c.keyPresses:
 			switch key {
