@@ -37,6 +37,7 @@ func distributor(p Params, c distributorChannels) {
 	// TODO: Create a 2D slice to store the world.
 	world := initWorld(p.ImageHeight, p.ImageWidth)
 	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
 	c.ioCommand <- ioInput
 	c.ioFilename <- strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth)}, "x")
@@ -115,12 +116,12 @@ func distributor(p Params, c distributorChannels) {
 		c.completedTurns = turn + 1
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
-		c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+		c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
 
 		select {
 		// ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
-			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+			c.events <- AliveCellsCount{c.completedTurns, len(resultRes.AliveCells)}
 		case key := <-c.keyPresses:
 			switch key {
 			case 's':
