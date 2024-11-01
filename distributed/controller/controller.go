@@ -37,7 +37,15 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 	nextSate, aliveCells := server.CalculateNextState(0, subWorldHeight, 0, subWorldWidth, p, subWorld)
 
 	res.World = nextSate
-	res.AliveCells = aliveCells
+	res.AliveCells = make([]stdstruct.Cell, len(aliveCells))
+
+	// Update alive cell positions to the global coordinates
+	for i, cell := range aliveCells {
+		res.AliveCells[i] = stdstruct.Cell{
+			X: req.StartX + cell.X,
+			Y: req.StartY + cell.Y,
+		}
+	}
 	res.StartX = req.StartX
 	res.EndX = req.EndX
 	res.StartY = req.StartY

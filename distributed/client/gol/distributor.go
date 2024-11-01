@@ -115,6 +115,7 @@ func distributor(p Params, c distributorChannels) {
 		c.completedTurns = turn + 1
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
+		c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 
 		select {
 		// ticker.C is a channel that receives ticks every 2 seconds

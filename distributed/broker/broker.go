@@ -206,6 +206,7 @@ func (b *Broker) CollectResponses(req stdstruct.ResultRequest, res *stdstruct.Re
 	res.AliveCells = finalAliveCells
 	res.Results = result
 
+	fmt.Printf("Completed collecting responses for topic: %s\n", req.Topic)
 	return nil
 
 }
