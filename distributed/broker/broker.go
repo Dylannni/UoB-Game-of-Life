@@ -16,8 +16,9 @@ import (
 var (
 	topics     = make(map[string]chan stdstruct.CalRequest)
 	responseCh = make(map[string][]chan stdstruct.CalResponse, len(workers))
-	workers    = []string{"34.228.61.230:8031", "174.129.57.153:8032", "34.238.155.236:8033"}
-	topicmx    sync.RWMutex
+	workers    = []string{"34.228.61.230:8031", "174.129.57.153:8032"}
+	//"34.238.155.236:8033
+	topicmx sync.RWMutex
 )
 
 func InitWorld(height, width int) [][]byte {
@@ -28,7 +29,7 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
-// Create a new topic as a buffered channel.
+// Create a new topic as a buffered channel.cd
 func newTopic(topic string, buflen int) {
 	topicmx.Lock()
 	defer topicmx.Unlock()
