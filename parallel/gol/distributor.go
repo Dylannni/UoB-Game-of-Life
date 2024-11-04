@@ -3,6 +3,7 @@ package gol
 import (
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"uk.ac.bris.cs/gameoflife/util"
@@ -19,9 +20,16 @@ type distributorChannels struct {
 	keyPresses     <-chan rune
 }
 
-func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld chan<- [][]byte) {
+var mu sync.Mutex
+
+// tempWorld store each workers result
+func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distributorChannels, tempWorld *[][][]byte, i int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	worldPart := calculateNextState(startY, endY, startX, endX, p, world, c)
-	tempWorld <- worldPart
+	mu.Lock()
+	(*tempWorld)[i] = worldPart
+	mu.Unlock()
+
 }
 
 // send the world into output
@@ -71,22 +79,28 @@ func distributor(p Params, c distributorChannels) {
 		if p.Threads == 1 {
 			world = calculateNextState(0, p.ImageHeight, 0, p.ImageWidth, p, world, c)
 		} else {
-			tempWorld := make([]chan [][]byte, p.Threads)
-			for i := range tempWorld {
-				tempWorld[i] = make(chan [][]byte)
-			}
-
+			tempWorld := make([][][]byte, p.Threads)
 			heightPerThread := p.ImageHeight / p.Threads
-
-			for i := 0; i < p.Threads-1; i++ {
-				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, world, c, tempWorld[i])
+			for i := range tempWorld {
+				tempWorld[i] = make([][]byte, heightPerThread)
+				for j := range tempWorld[i] {
+					tempWorld[i][j] = make([]byte, p.ImageWidth)
+				}
 			}
-			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, world, c, tempWorld[p.Threads-1])
+			var wg sync.WaitGroup
+			for i := 0; i < p.Threads-1; i++ {
+				wg.Add(1)
+				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, world, c, &tempWorld, i, &wg)
+			}
+			wg.Add(1)
+			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, world, c, &tempWorld, p.Threads-1, &wg)
+
+			//wait all the workers to finish
+			wg.Wait()
 
 			mergeWorld := initWorld(0, 0)
 			for i := 0; i < p.Threads; i++ {
-				pieces := <-tempWorld[i]
-				mergeWorld = append(mergeWorld, pieces...)
+				mergeWorld = append(mergeWorld, tempWorld[i]...)
 			}
 			world = mergeWorld
 		}
@@ -112,14 +126,18 @@ func distributor(p Params, c distributorChannels) {
 				return
 			case 'p':
 				c.events <- StateChange{turn, Paused}
+				//mu.Lock()
 				pause := true
+				//mu.Unlock()
 
 				for pause {
 					key := <-c.keyPresses
 					switch key {
 					case 'p':
 						c.events <- StateChange{turn, Executing}
+						mu.Lock()
 						pause = false
+						mu.Unlock()
 					case 's':
 						outputImage(c, p, world)
 					case 'q':
