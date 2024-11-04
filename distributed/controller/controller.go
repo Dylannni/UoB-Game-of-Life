@@ -135,5 +135,6 @@ func main() {
 
 	}
 	defer listener.Close()
+	fmt.Println("Server Start, Listening on " + listener.Addr().String())
 	rpc.Accept(listener)
 }
