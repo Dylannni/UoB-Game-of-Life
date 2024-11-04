@@ -1,7 +1,15 @@
 package stdstruct
 
+// Use by distributor
 type Cell struct {
 	X, Y int
+}
+
+type Params struct {
+	Turns       int
+	Threads     int
+	ImageWidth  int
+	ImageHeight int
 }
 
 type CalRequest struct {
