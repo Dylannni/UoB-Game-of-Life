@@ -22,21 +22,6 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
-// func calculateAliveCells(p Params, world [][]byte) []stdstruct.Cell {
-// 	var aliveCells []stdstruct.Cell
-
-// 	// Iterate over every cell in the world
-// 	for row := 0; row < p.ImageHeight; row++ {
-// 		for col := 0; col < p.ImageWidth; col++ {
-// 			// If the cell is alive (value is 255), add it to the list
-// 			if world[row][col] == 255 {
-// 				aliveCells = append(aliveCells, stdstruct.Cell{X: col, Y: row})
-// 			}
-// 		}
-// 	}
-// 	return aliveCells
-// }
-
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
 //   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
