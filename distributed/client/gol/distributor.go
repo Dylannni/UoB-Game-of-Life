@@ -105,7 +105,6 @@ func distributor(p Params, c distributorChannels) {
 				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 				c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
 				close(c.events)
-
 			case 'p':
 				c.events <- StateChange{turn, Paused}
 				pause := true
@@ -116,6 +115,7 @@ func distributor(p Params, c distributorChannels) {
 					case 'p':
 						fmt.Println("Continuing")
 						c.events <- StateChange{turn, Executing}
+						ticker.Reset(2 * time.Second)
 						pause = false
 					case 's':
 						outputImage(c, p, world)
@@ -135,10 +135,10 @@ func distributor(p Params, c distributorChannels) {
 
 	}
 
-	outputImage(c, p, world)
+	// outputImage(c, p, world)
 
-	// TODO: Report the final state using FinalTurnCompleteEvent.
-	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+	// // TODO: Report the final state using FinalTurnCompleteEvent.
+	// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
