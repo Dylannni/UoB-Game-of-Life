@@ -25,7 +25,7 @@ type distributorChannels struct {
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
-	client, err := rpc.Dial("tcp", "54.88.219.103:8030")
+	client, err := rpc.Dial("tcp", "3.86.32.237:8030")
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
@@ -135,10 +135,10 @@ func distributor(p Params, c distributorChannels) {
 
 	}
 
-	// outputImage(c, p, world)
+	outputImage(c, p, world)
 
-	// // TODO: Report the final state using FinalTurnCompleteEvent.
-	// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+	// TODO: Report the final state using FinalTurnCompleteEvent.
+	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
