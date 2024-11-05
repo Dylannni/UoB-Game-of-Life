@@ -20,8 +20,8 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "34.239.0.10", Port: "8031"},
-	{Address: "44.210.94.134", Port: "8032"},
+	{Address: "44.203.150.15", Port: "8031"},
+	{Address: "54.86.171.180", Port: "8032"},
 	// {Address: "localhost", Port: "8083"},
 	// {Address: "localhost", Port: "8084"},
 	// {Address: "localhost", Port: "8085"},
