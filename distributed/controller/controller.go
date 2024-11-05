@@ -118,9 +118,9 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 			globalY := y + 1
 			globalX := x
 			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
+			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), len(currWorld[0]))
 			// Apply the Game of Life rules
-			if nextWorld[y][x] == 255 {
+			if currentWorld[globalY][globalX] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					nextWorld[y][x] = 0 // Cell dies
