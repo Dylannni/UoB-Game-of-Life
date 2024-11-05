@@ -120,9 +120,13 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	return nil
 }
 
-func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) error {
+func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {
 	fmt.Println("Shutting down the broker")
 	// Optionally, send shutdown signals to controllers
+	for _, server := range b.serverList {
+		err = server.Call("GameOfLife.ShutDown", stdstruct.ShutRequest{}, stdstruct.ShutResponse{})
+	}
+	fmt.Println("Broker Stopped")
 	os.Exit(0)
 	return nil
 }

@@ -95,7 +95,7 @@ func distributor(p Params, c distributorChannels) {
 				outputImage(c, p, world)
 				fmt.Println("Shutting down the system ")
 				var shutdownReq, shutdownRes struct{}
-				client.Call("GameOfLife.ShutDown", &shutdownReq, &shutdownRes)
+				client.Call("Broker.ShutDown", &shutdownReq, &shutdownRes)
 				c.ioCommand <- ioCheckIdle
 				<-c.ioIdle
 				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
