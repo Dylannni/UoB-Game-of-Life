@@ -96,12 +96,13 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
-	currWorld := InitWorld(req.EndY, req.EndX)
-	for y := 0; y < req.EndY; y++ {
-		for x := 0; x < req.EndX; x++ {
-			currWorld[y][x] = req.ExtendedSlice[y][x]
-		}
-	}
+	// currWorld := InitWorld(req.EndY, req.EndX)
+	currWorld := req.ExtendedSlice
+	// for y := 0; y < req.EndY; y++ {
+	// 	for x := 0; x < req.EndX; x++ {
+	// 		currWorld[y][x] = req.ExtendedSlice[y][x]
+	// 	}
+	// }
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
