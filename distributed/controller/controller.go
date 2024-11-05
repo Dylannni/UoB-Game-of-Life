@@ -59,14 +59,15 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 }
 
 //worker: Responsible for computing a specified portion of the grid
-func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, globalAliveCells *[]stdstruct.Cell, mu *sync.Mutex) {
+func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh chan<- []stdstruct.Cell, mu *sync.Mutex) {
 	//使用本地的 aliveCells 列表存储局部计算的活细胞
 	localAliveCells := []stdstruct.Cell{}
 	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
-			globalY := y + startY
+			globalY := y
 			globalX := x
 			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), width)
+
 			if currWorld[globalY][globalX] == 255 {
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					nextWorld[y][x] = 0
@@ -86,7 +87,7 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, globalAl
 	}
 	// 使用互斥锁来安全地将本地的 aliveCells 合并到全局的 aliveCells 中
 	mu.Lock()
-	*globalAliveCells = append(*globalAliveCells, localAliveCells...)
+	resultCh <- localAliveCells
 	mu.Unlock()
 }
 
@@ -103,14 +104,13 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 	width := req.EndX - req.StartX
 	nextWorld := InitWorld(height, width)
 
-	var aliveCells []stdstruct.Cell
-
 	//Gets the number of available CPU cores
 	numWorkers := runtime.NumCPU()
 	heightPerWorker := height / numWorkers
 
 	var wg sync.WaitGroup
 	var mu sync.Mutex
+	resultCh := make(chan []stdstruct.Cell, numWorkers)
 	wg.Add(numWorkers)
 
 	for i := 0; i < numWorkers; i++ {
@@ -120,13 +120,22 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 			endY = height //确保最后一个worker 覆盖到网格底层
 		}
 		//启动每个worker，并将它们分配到不同的goroutine中
+		wg.Add(1)
 		go func(startY, endY int) {
 			defer wg.Done()
-			worker(startY, endY, currWorld, nextWorld, width, &aliveCells, &mu)
+			worker(startY, endY, currWorld, nextWorld, width, resultCh, &mu)
 		}(startY, endY)
 	}
-	//等待所以worker完成计算
-	wg.Wait()
+
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	var aliveCells []stdstruct.Cell
+	for cells := range resultCh {
+		aliveCells = append(aliveCells, cells...)
+	}
 
 	//更新结果
 	res.World = nextWorld
