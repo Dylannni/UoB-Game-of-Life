@@ -66,6 +66,9 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh
 		for x := 0; x < width; x++ {
 			globalY := y
 			globalX := x
+			if globalY >= len(currWorld) || globalX >= width {
+				continue // 跳过无效索引，避免越界
+			}
 			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), width)
 
 			if currWorld[globalY][globalX] == 255 {
