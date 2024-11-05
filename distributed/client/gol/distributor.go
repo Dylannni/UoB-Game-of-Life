@@ -1,6 +1,7 @@
 package gol
 
 import (
+	"flag"
 	"fmt"
 	"net/rpc"
 	"strconv"
@@ -24,8 +25,10 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
+	brokerAddr := flag.String("broker", "127.0.0.1:8030", "Address of broker instance")
+	flag.Parse()
 
-	client, err := rpc.Dial("tcp", "3.86.32.237:8030")
+	client, err := rpc.Dial("tcp", *brokerAddr)
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
@@ -57,23 +60,33 @@ func distributor(p Params, c distributorChannels) {
 	for turn = 0; turn < p.Turns; turn++ {
 
 		// prepare request for server
-		req := stdstruct.CalRequest{
-			StartY: 0,
-			EndY:   p.ImageHeight,
-			StartX: 0,
-			EndX:   p.ImageWidth,
-			World:  world,
-		}
-		var res stdstruct.CalResponse
+		gameReq := stdstruct.GameRequest{World: world}
+		var gameRes stdstruct.GameResponse
 
-		err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
+		err := client.Call("Broker.RunGol", gameReq, &gameRes)
 		if err != nil {
-			fmt.Println("Error calculating next turn:", err)
+			fmt.Println("Error starting game:", err)
 			return
 		}
 
+		// req := stdstruct.CalRequest{
+		// 	StartY: 0,
+		// 	EndY:   p.ImageHeight,
+		// 	StartX: 0,
+		// 	EndX:   p.ImageWidth,
+		// 	World:  world,
+		// }
+		// var res stdstruct.CalResponse
+
+		// err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
+		// if err != nil {
+		// 	fmt.Println("Error calculating next turn:", err)
+		// 	return
+		// }
+
 		//update the world
-		world = res.World
+		// world = res.World
+		world = gameRes.World
 		c.completedTurns = turn + 1
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
@@ -92,7 +105,7 @@ func distributor(p Params, c distributorChannels) {
 				outputImage(c, p, world)
 				c.events <- StateChange{turn, Quitting}
 				close(c.events)
-
+				return
 			//all components of the distributed system are shut down
 			case 'k':
 				// Both server and controller down
@@ -105,6 +118,7 @@ func distributor(p Params, c distributorChannels) {
 				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 				c.events <- StateChange{CompletedTurns: c.completedTurns, NewState: Quitting}
 				close(c.events)
+				return
 			case 'p':
 				c.events <- StateChange{turn, Paused}
 				pause := true
