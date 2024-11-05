@@ -32,7 +32,7 @@ type distributorChannels struct {
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
-	client, err := rpc.Dial("tcp", "54.88.219.103:8030")
+	client, err := rpc.Dial("tcp", "204.236.222.154:8030")
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)

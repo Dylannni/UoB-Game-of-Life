@@ -59,8 +59,8 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 }
 
 //worker: Responsible for computing a specified portion of the grid
-func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, aliveCells *[]stdstruct.Cell, mu *sync.Mutex) {
-	//
+func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, globalAliveCells *[]stdstruct.Cell, mu *sync.Mutex) {
+	//使用本地的 aliveCells 列表存储局部计算的活细胞
 	localAliveCells := []stdstruct.Cell{}
 	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
@@ -72,12 +72,12 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, aliveCel
 					nextWorld[y][x] = 0
 				} else {
 					nextWorld[y][x] = 255
-					*aliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					localAliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				}
 			} else {
 				if liveNeighbors == 3 {
 					nextWorld[y][x] = 255
-					*aliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+					localAliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				} else {
 					nextWorld[y][x] = 0
 				}
@@ -86,7 +86,7 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, aliveCel
 	}
 	// 使用互斥锁来安全地将本地的 aliveCells 合并到全局的 aliveCells 中
 	mu.Lock()
-	*aliveCells = append(*aliveCells, localAliveCells...)
+	*globalAliveCells = append(*globalAliveCells, localAliveCells...)
 	mu.Unlock()
 }
 
@@ -117,7 +117,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 		startY := i * heightPerWorker
 		endY := startY + heightPerWorker
 		if i == numWorkers-1 {
-			endY = startY
+			endY = height //确保最后一个worker 覆盖到网格底层
 		}
 		//启动每个worker，并将它们分配到不同的goroutine中
 		go func(startY, endY int) {
