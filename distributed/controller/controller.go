@@ -99,13 +99,14 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	currWorld := InitWorld(req.EndY, req.EndX)
 	for y := 0; y < req.EndY; y++ {
 		for x := 0; x < req.EndX; x++ {
-			currWorld[y][x] = req.World[y][x]
+			currWorld[y][x] = req.ExtendedSlice[y][x]
 		}
 	}
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
-	nextWorld := InitWorld(height, width)
+	// nextWorld := InitWorld(height, width)
+	nextWorld := req.Slice
 
 	// var aliveCells []stdstruct.Cell
 
@@ -113,12 +114,12 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 
-			globalY := req.StartY + y
-			globalX := req.StartX + x
+			globalY := y + 1
+			globalX := x
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
 			// Apply the Game of Life rules
-			if currWorld[globalY][globalX] == 255 {
+			if nextWorld[y][x] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					nextWorld[y][x] = 0 // Cell dies

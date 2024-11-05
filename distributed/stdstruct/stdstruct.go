@@ -51,8 +51,8 @@ type SliceRequest struct {
 	EndX   int
 	StartY int
 	EndY   int
-	World  [][]byte
 	Slice  [][]byte
+	ExtendedSlice  [][]byte
 }
 
 type SliceResponse struct {
