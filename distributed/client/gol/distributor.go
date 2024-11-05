@@ -1,7 +1,6 @@
 package gol
 
 import (
-	"flag"
 	"fmt"
 	"net/rpc"
 	"strconv"
@@ -25,10 +24,11 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
-	brokerAddr := flag.String("broker", "127.0.0.1:8030", "Address of broker instance")
-	flag.Parse()
+	// brokerAddr := flag.String("broker", "127.0.0.1:8030", "Address of broker instance")
+	// flag.Parse()
 
-	client, err := rpc.Dial("tcp", *brokerAddr)
+	// client, err := rpc.Dial("tcp", *brokerAddr)
+	client, err := rpc.Dial("tcp", "127.0.0.1:8030")
 
 	if err != nil {
 		fmt.Println("Error connecting to server:", err)
