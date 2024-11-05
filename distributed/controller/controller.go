@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
+	"sync"
 
 	"net"
 	"net/rpc"
@@ -56,6 +58,38 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
+//worker: Responsible for computing a specified portion of the grid
+func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, aliveCells *[]stdstruct.Cell, mu *sync.Mutex) {
+	//
+	localAliveCells := []stdstruct.Cell{}
+	for y := startY; y < endY; y++ {
+		for x := 0; x < width; x++ {
+			globalY := y + startY
+			globalX := x
+			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), width)
+			if currWorld[globalY][globalX] == 255 {
+				if liveNeighbors < 2 || liveNeighbors > 3 {
+					nextWorld[y][x] = 0
+				} else {
+					nextWorld[y][x] = 255
+					*aliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+				}
+			} else {
+				if liveNeighbors == 3 {
+					nextWorld[y][x] = 255
+					*aliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+				} else {
+					nextWorld[y][x] = 0
+				}
+			}
+		}
+	}
+	// 使用互斥锁来安全地将本地的 aliveCells 合并到全局的 aliveCells 中
+	mu.Lock()
+	*aliveCells = append(*aliveCells, localAliveCells...)
+	mu.Unlock()
+}
+
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
 
 	currWorld := InitWorld(req.EndY, req.EndX)
@@ -71,36 +105,64 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 
 	var aliveCells []stdstruct.Cell
 
-	// Iterate over each cell in the world
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
+	//Gets the number of available CPU cores
+	numWorkers := runtime.NumCPU()
+	heightPerWorker := height / numWorkers
 
-			globalY := req.StartY + y
-			globalX := req.StartX + x
-			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
-			// Apply the Game of Life rules
-			if currWorld[globalY][globalX] == 255 {
-				// Cell is alive
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					nextWorld[y][x] = 0 // Cell dies
-				} else {
-					nextWorld[y][x] = 255 // Cell stays alive
-					res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
-				}
-			} else {
-				// Cell is dead
-				if liveNeighbors == 3 {
-					nextWorld[y][x] = 255 // Cell becomes alive
-					res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
-				} else {
-					nextWorld[y][x] = 0 // Cell stays dead
-				}
-			}
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	wg.Add(numWorkers)
+
+	for i := 0; i < numWorkers; i++ {
+		startY := i * heightPerWorker
+		endY := startY + heightPerWorker
+		if i == numWorkers-1 {
+			endY = startY
 		}
+		//启动每个worker，并将它们分配到不同的goroutine中
+		go func(startY, endY int) {
+			defer wg.Done()
+			worker(startY, endY, currWorld, nextWorld, width, &aliveCells, &mu)
+		}(startY, endY)
 	}
+	//等待所以worker完成计算
+	wg.Wait()
+
+	//更新结果
 	res.World = nextWorld
+	res.AliveCells = aliveCells
+
+	//// Iterate over each cell in the world
+	//for y := 0; y < height; y++ {
+	//	for x := 0; x < width; x++ {
+	//
+	//		globalY := req.StartY + y
+	//		globalX := req.StartX + x
+	//		// Count the live neighbors
+	//		liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
+	//		// Apply the Game of Life rules
+	//		if currWorld[globalY][globalX] == 255 {
+	//			// Cell is alive
+	//			if liveNeighbors < 2 || liveNeighbors > 3 {
+	//				nextWorld[y][x] = 0 // Cell dies
+	//			} else {
+	//				nextWorld[y][x] = 255 // Cell stays alive
+	//				res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+	//			}
+	//		} else {
+	//			// Cell is dead
+	//			if liveNeighbors == 3 {
+	//				nextWorld[y][x] = 255 // Cell becomes alive
+	//				res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+	//			} else {
+	//				nextWorld[y][x] = 0 // Cell stays dead
+	//			}
+	//		}
+	//	}
+	//}
+	//res.World = nextWorld
 	return nil
+
 }
 
 // shutting down the server when k is pressed
@@ -117,7 +179,6 @@ func main() {
 	listener, err := net.Listen("tcp", ":"+*pAddr)
 	if err != nil {
 		panic(err)
-
 	}
 	defer listener.Close()
 	fmt.Println("Server Start, Listening on " + listener.Addr().String())
