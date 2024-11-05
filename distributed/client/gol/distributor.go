@@ -117,9 +117,9 @@ func distributor(p Params, c distributorChannels) {
 		//Extension: parallel distributed
 		//In distributor.go, add performance tests for images of different sizes
 		//return time difference
-		elapesd := time.Since(start)
+		elapesdTime := time.Since(start)
 		//Format the execution time of the current turn
-		fmt.Printf("Turn %d took %s\n", turn, elapesd)
+		fmt.Printf("Turn %d took %s\n", turn, elapesdTime)
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
