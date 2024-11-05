@@ -22,44 +22,6 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
-// // ProcessSlice processes a slice of the world and returns the updated slice
-// func (s *GameOfLife) ProcessSlice(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) error {
-
-// 	// processedSlice := processSlice(req.World, req.StartY, req.EndY)
-// 	processedSlice := CalculateNextTurn(req.World, req.StartY, req.EndY, )
-// 	res.World = processedSlice
-// 	return nil
-// }
-
-// func processSlice(world [][]byte, startY, endY int) [][]byte {
-// 	height := len(world)
-// 	width := len(world[0])
-// 	newSlice := make([][]byte, height)
-// 	for i := range newSlice {
-// 		newSlice[i] = make([]byte, width)
-// 	}
-
-// 	for y := 0; y < height; y++ {
-// 		for x := 0; x < width; x++ {
-// 			liveNeighbors := countLiveNeighbors(world, y, x, height, width)
-// 			if world[y][x] == 255 {
-// 				if liveNeighbors < 2 || liveNeighbors > 3 {
-// 					newSlice[y][x] = 0 // Cell dies
-// 				} else {
-// 					newSlice[y][x] = 255 // Cell stays alive
-// 				}
-// 			} else {
-// 				if liveNeighbors == 3 {
-// 					newSlice[y][x] = 255 // Cell becomes alive
-// 				} else {
-// 					newSlice[y][x] = 0 // Cell stays dead
-// 				}
-// 			}
-// 		}
-// 	}
-// 	return newSlice
-// }
-
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
 //   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
@@ -96,20 +58,14 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
-	// currWorld := InitWorld(req.EndY, req.EndX)
+	// world slice with two extra row (one at the top and one at the bottom)
 	currWorld := req.ExtendedSlice
-	// for y := 0; y < req.EndY; y++ {
-	// 	for x := 0; x < req.EndX; x++ {
-	// 		currWorld[y][x] = req.ExtendedSlice[y][x]
-	// 	}
-	// }
+
+	// world slice without halo area, will return to broker after calculation 
+	nextWorld := req.Slice
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
-	// nextWorld := InitWorld(height, width)
-	nextWorld := req.Slice
-
-	// var aliveCells []stdstruct.Cell
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -126,13 +82,11 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 					nextWorld[y][x] = 0 // Cell dies
 				} else {
 					nextWorld[y][x] = 255 // Cell stays alive
-					// res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
 					nextWorld[y][x] = 255 // Cell becomes alive
-					// res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				} else {
 					nextWorld[y][x] = 0 // Cell stays dead
 				}
@@ -151,6 +105,9 @@ func (s *GameOfLife) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutRespons
 }
 
 func main() {
+	// Usage: go run controller.go -port XXXX
+
+	// Default port 8080
 	pAddr := flag.String("port", "8080", "Port to listen on")
 	flag.Parse()
 	rpc.Register(&GameOfLife{})
@@ -161,6 +118,5 @@ func main() {
 	defer listener.Close()
 
 	fmt.Println("Controller started, listening on port", *pAddr)
-
 	rpc.Accept(listener)
 }

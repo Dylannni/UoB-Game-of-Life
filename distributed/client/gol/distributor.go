@@ -69,23 +69,6 @@ func distributor(p Params, c distributorChannels) {
 			return
 		}
 
-		// req := stdstruct.CalRequest{
-		// 	StartY: 0,
-		// 	EndY:   p.ImageHeight,
-		// 	StartX: 0,
-		// 	EndX:   p.ImageWidth,
-		// 	World:  world,
-		// }
-		// var res stdstruct.CalResponse
-
-		// err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
-		// if err != nil {
-		// 	fmt.Println("Error calculating next turn:", err)
-		// 	return
-		// }
-
-		//update the world
-		// world = res.World
 		world = gameRes.World
 		c.completedTurns = turn + 1
 
