@@ -22,41 +22,43 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
-// ProcessSlice processes a slice of the world and returns the updated slice
-func (s *GameOfLife) ProcessSlice(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) error {
-	processedSlice := processSlice(req.World, req.StartY, req.EndY)
-	res.World = processedSlice
-	return nil
-}
+// // ProcessSlice processes a slice of the world and returns the updated slice
+// func (s *GameOfLife) ProcessSlice(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) error {
 
-func processSlice(world [][]byte, startY, endY int) [][]byte {
-	height := len(world)
-	width := len(world[0])
-	newSlice := make([][]byte, height)
-	for i := range newSlice {
-		newSlice[i] = make([]byte, width)
-	}
+// 	// processedSlice := processSlice(req.World, req.StartY, req.EndY)
+// 	processedSlice := CalculateNextTurn(req.World, req.StartY, req.EndY, )
+// 	res.World = processedSlice
+// 	return nil
+// }
 
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			liveNeighbors := countLiveNeighbors(world, y, x, height, width)
-			if world[y][x] == 255 {
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					newSlice[y][x] = 0 // Cell dies
-				} else {
-					newSlice[y][x] = 255 // Cell stays alive
-				}
-			} else {
-				if liveNeighbors == 3 {
-					newSlice[y][x] = 255 // Cell becomes alive
-				} else {
-					newSlice[y][x] = 0 // Cell stays dead
-				}
-			}
-		}
-	}
-	return newSlice
-}
+// func processSlice(world [][]byte, startY, endY int) [][]byte {
+// 	height := len(world)
+// 	width := len(world[0])
+// 	newSlice := make([][]byte, height)
+// 	for i := range newSlice {
+// 		newSlice[i] = make([]byte, width)
+// 	}
+
+// 	for y := 0; y < height; y++ {
+// 		for x := 0; x < width; x++ {
+// 			liveNeighbors := countLiveNeighbors(world, y, x, height, width)
+// 			if world[y][x] == 255 {
+// 				if liveNeighbors < 2 || liveNeighbors > 3 {
+// 					newSlice[y][x] = 0 // Cell dies
+// 				} else {
+// 					newSlice[y][x] = 255 // Cell stays alive
+// 				}
+// 			} else {
+// 				if liveNeighbors == 3 {
+// 					newSlice[y][x] = 255 // Cell becomes alive
+// 				} else {
+// 					newSlice[y][x] = 0 // Cell stays dead
+// 				}
+// 			}
+// 		}
+// 	}
+// 	return newSlice
+// }
 
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
@@ -92,52 +94,52 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-// func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
+func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
 
-// 	currWorld := InitWorld(req.EndY, req.EndX)
-// 	for y := 0; y < req.EndY; y++ {
-// 		for x := 0; x < req.EndX; x++ {
-// 			currWorld[y][x] = req.World[y][x]
-// 		}
-// 	}
+	currWorld := InitWorld(req.EndY, req.EndX)
+	for y := 0; y < req.EndY; y++ {
+		for x := 0; x < req.EndX; x++ {
+			currWorld[y][x] = req.World[y][x]
+		}
+	}
 
-// 	height := req.EndY - req.StartY
-// 	width := req.EndX - req.StartX
-// 	nextWorld := InitWorld(height, width)
+	height := req.EndY - req.StartY
+	width := req.EndX - req.StartX
+	nextWorld := InitWorld(height, width)
 
-// 	var aliveCells []stdstruct.Cell
+	// var aliveCells []stdstruct.Cell
 
-// 	// Iterate over each cell in the world
-// 	for y := 0; y < height; y++ {
-// 		for x := 0; x < width; x++ {
+	// Iterate over each cell in the world
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 
-// 			globalY := req.StartY + y
-// 			globalX := req.StartX + x
-// 			// Count the live neighbors
-// 			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
-// 			// Apply the Game of Life rules
-// 			if currWorld[globalY][globalX] == 255 {
-// 				// Cell is alive
-// 				if liveNeighbors < 2 || liveNeighbors > 3 {
-// 					nextWorld[y][x] = 0 // Cell dies
-// 				} else {
-// 					nextWorld[y][x] = 255 // Cell stays alive
-// 					res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
-// 				}
-// 			} else {
-// 				// Cell is dead
-// 				if liveNeighbors == 3 {
-// 					nextWorld[y][x] = 255 // Cell becomes alive
-// 					res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
-// 				} else {
-// 					nextWorld[y][x] = 0 // Cell stays dead
-// 				}
-// 			}
-// 		}
-// 	}
-// 	res.World = nextWorld
-// 	return nil
-// }
+			globalY := req.StartY + y
+			globalX := req.StartX + x
+			// Count the live neighbors
+			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
+			// Apply the Game of Life rules
+			if currWorld[globalY][globalX] == 255 {
+				// Cell is alive
+				if liveNeighbors < 2 || liveNeighbors > 3 {
+					nextWorld[y][x] = 0 // Cell dies
+				} else {
+					nextWorld[y][x] = 255 // Cell stays alive
+					// res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+				}
+			} else {
+				// Cell is dead
+				if liveNeighbors == 3 {
+					nextWorld[y][x] = 255 // Cell becomes alive
+					// res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+				} else {
+					nextWorld[y][x] = 0 // Cell stays dead
+				}
+			}
+		}
+	}
+	res.Slice = nextWorld
+	return nil
+}
 
 // shutting down the server when k is pressed
 func (s *GameOfLife) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {
@@ -145,43 +147,6 @@ func (s *GameOfLife) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutRespons
 	os.Exit(0)
 	return nil
 }
-
-// func main() {
-
-// 	pAddr := flag.String("port", "8050", "Port to listen on")
-// 	brokerAddr := flag.String("broker", "127.0.0.1:8030", "Address of broker instance")
-// 	flag.Parse()
-// 	// client, _ := rpc.Dial("tcp", *brokerAddr)
-
-// 	// pAddr := flag.String("port", "8030", "Port to listen on")
-// 	// flag.Parse()
-// 	rpc.Register(&GameOfLife{})
-// 	listener, err := net.Listen("tcp", ":"+*pAddr)
-// 	if err != nil {
-// 		panic(err)
-
-// 	}
-// 	defer listener.Close()
-
-// 	address := "controlloer_address:xxxx"
-
-// 	// Register with broker
-// 	client, err := rpc.Dial("tcp", *brokerAddr)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer client.Close()
-// 	req := stdstruct.RegisterRequest{Address: address}
-// 	var res stdstruct.RegisterResponse
-// 	err = client.Call("Broker.RegisterController", req, &res)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	rpc.Accept(listener)
-
-// 	fmt.Println("Server Start, Listening on " + listener.Addr().String())
-// 	rpc.Accept(listener)
-// }
 
 func main() {
 	pAddr := flag.String("port", "8080", "Port to listen on")

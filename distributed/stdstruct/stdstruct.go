@@ -47,11 +47,14 @@ type GameResponse struct {
 }
 
 type SliceRequest struct {
+	StartX int
+	EndX   int
 	StartY int
 	EndY   int
 	World  [][]byte
+	Slice  [][]byte
 }
 
 type SliceResponse struct {
-	World [][]byte
+	Slice [][]byte
 }
