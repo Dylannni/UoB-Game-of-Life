@@ -105,17 +105,6 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-err = server.Call("GameOfLife.Init", stdstruct.InitRequest{
-	StartX: 0,
-	EndX: 	width,
-	StartY: startY,
-	EndY:   endY,
-	World:  slice,
-	Threads:        req.Threads,
-	PreviousServer: b.serverList[(i-1+b.connectedNodes)%b.connectedNodes].ServerAddress,
-	NextServer:     b.serverList[(i+1+b.connectedNodes)%b.connectedNodes].ServerAddress,
-}, &stdstruct.InitResponse{})
-
 func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
 	// init the AWS node, should move these to a seprate function
 	s.world = req.Slice
