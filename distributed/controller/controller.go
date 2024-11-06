@@ -11,65 +11,65 @@ import (
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
-type GameOfLife struct{}
-
-// initialise world
-func InitWorld(height, width int) [][]byte {
-	world := make([][]byte, height)
-	for i := range world {
-		world[i] = make([]byte, width)
-	}
-	return world
+type GameOfLife struct{
+	world 			[][]byte
+	height 			int
+	width			int
+	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
+	lastLineSent   	chan bool
+	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了（但是这样就
 }
 
-// func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
-// 	newWorld := make([][]byte, 0, height+2)
-// 	newWorld = append(newWorld, topHalo)
-// 	newWorld = append(newWorld, world...)
-// 	newWorld = append(newWorld, bottomHalo)
-// 	return newWorld
-// }
+func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
+	newWorld := make([][]byte, 0, height+2)
+	newWorld = append(newWorld, topHalo)
+	newWorld = append(newWorld, world...)
+	newWorld = append(newWorld, bottomHalo)
+	return newWorld
+}
 
-// 这两个函数用于获取光环，其实写成一个函数会更好，因为内容重复我就不写两遍注释了
+// GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
+func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponsee) (err error) {
+	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
+	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
+	for i, val := range s.world[0] {
+		haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
+	}
+	res.HaloLine = haloLine
+	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
+	return
+}
 
-// // GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
-// func (s *GameOfLife) GetFirstLine(_ stubs.LineRequest, res *stubs.LineResponse) (err error) {
-// 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
-// 	line := make([]uint8, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
-// 	for i, value := range s.world[0] {
-// 		line[i] = value // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
-// 	}
-// 	res.Line = line
-// 	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
-// 	return
-// }
+// GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
+func (s *SeGameOfLiferver) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+	haloLine := make([]byte, len(s.world[s.height-1]))
+	for i, val := range s.world[s.height-1] {
+		haloLine[i] = val
+	}
+	res.HaloLine = haloLine
+	s.lastLineSent <- true
+	return
+}
 
-// // GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
-// func (s *SeGameOfLiferver) GetLastLine(_ stubs.LineRequest, res *stubs.LineResponse) (err error) {
-// 	line := make([]uint8, len(s.world[s.height-1]))
-// 	for i, value := range s.world[s.height-1] {
-// 		line[i] = value
-// 	}
-// 	res.Line = line
-// 	s.lastLineSent <- true
-// 	return
-// }
-
-// // getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
-// func getHalo(server *rpc.Client, isFirstLine bool, out chan []uint8) {
-// 	res := stubs.LineResponse{}
-// 	var err error
-// 	if isFirstLine {
-// 		err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
-// 	} else {
-// 		err = server.Call("Server.GetLastLine", stubs.LineRequest{}, &res)
-// 	}
-// 	if err != nil {
-// 		handleError(err)
-// 	}
-// 	out <- res.Line
-// }
-
+// getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
+func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
+	res := stdstruct.HaloResponse{}
+	var err error
+	if isFirstLine {
+		// err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
+		err = server.Call("Server.GetFirstLine", stdstruct.HaloRequest{}, &res)
+		if err != nil {
+			fmt.Println("Error getting first line:", err)
+		}
+	} else {
+		err = server.Call("Server.GetLastLine", stdstruct.HaloRequest{}, &res)
+		if err != nil {
+			fmt.Println("Error getting last line:", err)
+		}
+	}
+	out <- res.Line
+}
 
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
@@ -105,20 +105,58 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
+err = server.Call("GameOfLife.Init", stdstruct.InitRequest{
+	StartX: 0,
+	EndX: 	width,
+	StartY: startY,
+	EndY:   endY,
+	World:  slice,
+	Threads:        req.Threads,
+	PreviousServer: b.serverList[(i-1+b.connectedNodes)%b.connectedNodes].ServerAddress,
+	NextServer:     b.serverList[(i+1+b.connectedNodes)%b.connectedNodes].ServerAddress,
+}, &stdstruct.InitResponse{})
+
+func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
+	// init the AWS node, should move these to a seprate function
+	s.world = req.Slice
+	s.firstLineSent = make(chan bool)
+	s.lastLineSent = make(chan bool)
+	s.height = req.EndY - req.StartY
+	s.width := req.EndX - req.StartX
+	s.previousServer, _ = rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
+	fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
+}
+
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
+	// Two Channels used to recive Halo Area from getHalo()
+	preOut := make(chan []byte)
+	nextOut := make(chan []byte)
+	go getHalo(s.previousNode, false, preOut)
+	go getHalo(s.nextNode, true, nextOut)
+
+	// Wait for neigbour node to send the getHalo() request
+	<- s.firstLineSent
+	<- s.lastLineSent
+
+	topHalo := <-preOut
+	bottomHalo := <-nextOut
+
+	// height := req.EndY - req.StartY
+	// width := req.EndX - req.StartX
+
 	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := req.ExtendedSlice
+	currWorld := attendHaloArea(s.height, req.Slice, topHalo, bottomHalo)
+	// currWorld := req.ExtendedSlice
 
 	// world slice without halo area, will return to broker after calculation 
 	nextWorld := req.Slice
 
-	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
-
 	// Iterate over each cell in the world
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
+	for y := 0; y < s.height; y++ {
+		for x := 0; x < s.width; x++ {
 
 			globalY := y + 1
 			globalX := x

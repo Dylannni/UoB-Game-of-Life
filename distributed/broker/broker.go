@@ -12,14 +12,15 @@ import (
 
 type Broker struct {
 	serverList []*rpc.Client // List of controller addresses
+	connectedNodes int 		 // number of connected node
 }
 
-type ServerAddress struct {
-	Address string
-	Port    string
-}
+// type ServerAddress struct {
+// 	Address string
+// 	Port    string
+// }
 
-var NodesList = [...]ServerAddress{
+var NodesList = [...]stdstruct.ServerAddress{
 	{Address: "44.211.202.200", Port: "8031"},
 	{Address: "3.83.11.239", Port: "8032"},
 	{Address: "3.89.206.35", Port: "8033"},
@@ -30,18 +31,18 @@ func (b *Broker) initNodes() {
 	numNodes := len(NodesList)
 	if len(b.serverList) == 0 {
 		b.serverList = make([]*rpc.Client, 0, numNodes)
-		connectedNode := 0
+		b.connectedNodes = 0
 		for i := range NodesList {
 			address := NodesList[i].Address + ":" + NodesList[i].Port
 			server, nodeErr := rpc.Dial("tcp", address)
 			if nodeErr == nil {
-				connectedNode += 1
+				b.connectedNodes += 1
 				b.serverList = append(b.serverList, server)
 				fmt.Println("Connected to node:", address)
 			} else {
 				fmt.Println("Failed to connect to node:", address, "Error:", nodeErr)
 			}
-			if connectedNode == numNodes {
+			if b.connectedNodes == numNodes {
 				break
 			}
 		}
@@ -66,28 +67,37 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	// errors := make([]error, numServers)
 
 	for i, server := range b.serverList {
-
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
 
 		slice := req.World[startY:endY]
+		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
+		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
 
-		var extendedSlice [][]byte
-		if startY == 0 {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		} else {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
+			StartX: 0,
+			EndX: 	width,
+			StartY: startY,
+			EndY:   endY,
+			World:  slice,
+			Threads:        req.Threads,
+			PreviousServer: stdstruct.ServerAddress{NodesList[preNodeIndex].Address, NodesList[preNodeIndex].Port},
+			NextServer:     stdstruct.ServerAddress{NodesList[nextNodeIndex].Address, NodesList[nextNodeIndex].Port},
+		}, &stdstruct.InitResponse{})
+		if err != nil {
+			fmt.Println("Error init :", err)
 		}
 
-		if endY == height {
-			// 最后一块切片，添加第一行作为 Ghost Cell
-			extendedSlice = append(extendedSlice, req.World[0])
-		} else {
-			// adding the first row of next slice to the bottom
-			extendedSlice = append(extendedSlice, req.World[endY])
-		}
+		// outChannel := make(chan [][]byte)
+		// outChannels = append(outChannels, outChannel)
+		// go runAWSnode(server, sliceReq, outChannel)
+	}
+
+	for i, server := range b.serverList {
+		startY := i * sliceHeight
+		endY := startY + sliceHeight
+
+		slice := req.World[startY:endY]
 
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
@@ -95,21 +105,11 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
-			ExtendedSlice:  extendedSlice,
+			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
-		// var sliceRes stdstruct.SliceResponse
-		// go err := client.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 		go runAWSnode(server, sliceReq, outChannel)
-
-		// if err != nil {
-		// 	fmt.Println("Error processing slice:", err)
-		// 	errors[i] = err
-		// }
-		// fmt.Printf("Worker %d processed rows %d to %d\n", i, startY, endY)
-
-		// results[i] = sliceRes.Slice
 	}
 
 	// Merge results
@@ -128,7 +128,6 @@ func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- 
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)
-		// errors[i] = err
 	}
 	out <- sliceRes.Slice
 }

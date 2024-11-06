@@ -60,7 +60,7 @@ func distributor(p Params, c distributorChannels) {
 	for turn = 0; turn < p.Turns; turn++ {
 
 		// prepare request for server
-		gameReq := stdstruct.GameRequest{World: world}
+		gameReq := stdstruct.GameRequest{World: world, Threads: p.Threads}
 		var gameRes stdstruct.GameResponse
 
 		err := client.Call("Broker.RunGol", gameReq, &gameRes)
