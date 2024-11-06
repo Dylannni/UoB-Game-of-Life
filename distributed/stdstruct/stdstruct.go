@@ -61,8 +61,8 @@ type InitRequest struct {
 	World  [][]byte
 	// // ExtendedSlice  [][]byte
 	// Threads int
-	// PreviousServer ServerAddress
-	// NextServer     ServerAddress
+	PreviousServer string
+	NextServer     string
 }
 
 type InitResponse struct {
@@ -74,9 +74,9 @@ type SliceRequest struct {
 	StartY int
 	EndY   int
 	Slice  			[][]byte
-	ExtendedSlice  	[][]byte
-	PreviousServer 	string
-	NextServer		string
+	// ExtendedSlice  	[][]byte
+	// PreviousServer 	string
+	// NextServer		string
 }
 
 type SliceResponse struct {

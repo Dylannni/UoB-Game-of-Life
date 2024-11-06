@@ -17,12 +17,29 @@ type GameOfLife struct{
 	// width			int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
-	// previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	// nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 	mu 				sync.Mutex
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
+
+	s.previousServer, err = rpc.Dial("tcp", req.PreviousServer)
+	if err != nil {
+		return fmt.Errorf("failed to connect to previous server: %v", err)
+	}
+	fmt.Println("Connect to previous halo server ", req.PreviousServer)
+
+	s.nextServer, err = rpc.Dial("tcp", req.NextServer)
+	if err != nil {
+		return fmt.Errorf("failed to connect to next server: %v", err)
+	}
+	fmt.Println("Connect to next halo server ", req.PreviousServer)
+
+
+
+
+
 	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
@@ -136,31 +153,31 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
 	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
 
-	var previousServer *rpc.Client
-	var nextServer *rpc.Client
+	// var previousServer *rpc.Client
+	// var nextServer *rpc.Client
 
 
-	// previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
-	previousServer, err = rpc.Dial("tcp", req.PreviousServer)
-	if err != nil {
-		return fmt.Errorf("failed to connect to previous server: %v", err)
-	}
-	fmt.Println("Connect to previous halo server ", req.PreviousServer)
-	// nextServer, _ = rpc.Dial("tcp", req.NextServer)
-	// fmt.Println("Connect to next halo server ", req.NextServer)
+	// // previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
+	// previousServer, err = rpc.Dial("tcp", req.PreviousServer)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to connect to previous server: %v", err)
+	// }
+	// fmt.Println("Connect to previous halo server ", req.PreviousServer)
+	// // nextServer, _ = rpc.Dial("tcp", req.NextServer)
+	// // fmt.Println("Connect to next halo server ", req.NextServer)
 
-	nextServer, err = rpc.Dial("tcp", req.NextServer)
-	if err != nil {
-		return fmt.Errorf("failed to connect to next server: %v", err)
-	}
-	fmt.Println("Connect to next halo server ", req.PreviousServer)
+	// nextServer, err = rpc.Dial("tcp", req.NextServer)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to connect to next server: %v", err)
+	// }
+	// fmt.Println("Connect to next halo server ", req.PreviousServer)
 
-	// // Two Channels used to recive Halo Area from getHalo()
-	// preOut := make(chan []byte)
-	// nextOut := make(chan []byte)
+	// Two Channels used to recive Halo Area from getHalo()
+	preOut := make(chan []byte)
+	nextOut := make(chan []byte)
 
-	go getHalo(previousServer, false, preOut)
-	go getHalo(nextServer, true, nextOut)
+	go getHalo(s.previousServer, false, preOut)
+	go getHalo(s.nextServer, true, nextOut)
 
 	// Wait for neigbour node to send the getHalo() request
 	<- s.firstLineSent
