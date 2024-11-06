@@ -54,6 +54,7 @@ type GameResponse struct {
 // }
 
 type InitRequest struct {
+	Height int
 	// StartX int
 	// EndX   int
 	// StartY int
@@ -74,7 +75,7 @@ type SliceRequest struct {
 	StartY int
 	EndY   int
 	Slice  			[][]byte
-	// ExtendedSlice  	[][]byte
+	ExtendedSlice  	[][]byte
 	// PreviousServer 	string
 	// NextServer		string
 }

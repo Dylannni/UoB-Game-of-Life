@@ -13,7 +13,7 @@ import (
 
 type GameOfLife struct{
 	world 			[][]byte
-	// height 			int
+	height 			int
 	// width			int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
@@ -34,16 +34,14 @@ func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) 
 	if err != nil {
 		return fmt.Errorf("failed to connect to next server: %v", err)
 	}
-	fmt.Println("Connect to next halo server ", req.PreviousServer)
-
-
-
+	fmt.Println("Connect to next halo server ", req.nextServer)
 
 
 	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
-	fmt.Println("INIT GameOfLife")
+	s.height = req.Height
+	fmt.Println("INITED GameOfLife")
 	return nil
 }
 
@@ -173,6 +171,9 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// fmt.Println("Connect to next halo server ", req.PreviousServer)
 
 	// Two Channels used to recive Halo Area from getHalo()
+
+	extWorld := req.ExtendedSlice
+
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
 
@@ -185,6 +186,11 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
+
+	fmt.Println("Top Halo Line!!!!")
+	fmt.Println(topHalo == extendedSlice[0])
+	fmt.Println("Bottom Halo Line!!!!")
+	fmt.Println(topHalo == extendedSlice[-1])
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX

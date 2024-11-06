@@ -76,6 +76,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
+			Height: endY - StartY
 			World: slice,
 			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
@@ -92,22 +93,22 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		// var extendedSlice [][]byte
-		// if startY == 0 {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		// } else {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
-		// }
+		var extendedSlice [][]byte
+		if startY == 0 {
+			// adding the last row of the last slice to the top
+			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
+		} else {
+			// adding the last row of the last slice to the top
+			extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		}
 
-		// if endY == height {
-		// 	// 最后一块切片，添加第一行作为 Ghost Cell
-		// 	extendedSlice = append(extendedSlice, req.World[0])
-		// } else {
-		// 	// adding the first row of next slice to the bottom
-		// 	extendedSlice = append(extendedSlice, req.World[endY])
-		// }
+		if endY == height {
+			// 最后一块切片，添加第一行作为 Ghost Cell
+			extendedSlice = append(extendedSlice, req.World[0])
+		} else {
+			// adding the first row of next slice to the bottom
+			extendedSlice = append(extendedSlice, req.World[endY])
+		}
 
 		// preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
 		// nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
@@ -120,7 +121,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			Slice:  slice,
 			// PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			// NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
-			// ExtendedSlice:  extendedSlice,
+			ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
