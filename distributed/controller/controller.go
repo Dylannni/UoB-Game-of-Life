@@ -21,55 +21,55 @@ type GameOfLife struct{
 	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
-func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
-	newWorld := make([][]byte, 0, height+2)
-	newWorld = append(newWorld, topHalo)
-	newWorld = append(newWorld, world...)
-	newWorld = append(newWorld, bottomHalo)
-	return newWorld
-}
+// func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
+// 	newWorld := make([][]byte, 0, height+2)
+// 	newWorld = append(newWorld, topHalo)
+// 	newWorld = append(newWorld, world...)
+// 	newWorld = append(newWorld, bottomHalo)
+// 	return newWorld
+// }
 
-// GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
-func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
-	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
-	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
-	for i, val := range s.world[0] {
-		haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
-	}
-	res.HaloLine = haloLine
-	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
-	return
-}
+// // GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
+// func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+// 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
+// 	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
+// 	for i, val := range s.world[0] {
+// 		haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
+// 	}
+// 	res.HaloLine = haloLine
+// 	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
+// 	return
+// }
 
-// GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
-func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
-	haloLine := make([]byte, len(s.world[s.height-1]))
-	for i, val := range s.world[s.height-1] {
-		haloLine[i] = val
-	}
-	res.HaloLine = haloLine
-	s.lastLineSent <- true
-	return
-}
+// // GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
+// func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+// 	haloLine := make([]byte, len(s.world[s.height-1]))
+// 	for i, val := range s.world[s.height-1] {
+// 		haloLine[i] = val
+// 	}
+// 	res.HaloLine = haloLine
+// 	s.lastLineSent <- true
+// 	return
+// }
 
-// getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
-func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
-	res := stdstruct.HaloResponse{}
-	var err error
-	if isFirstLine {
-		// err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
-		err = server.Call("Server.GetFirstLine", stdstruct.HaloRequest{}, &res)
-		if err != nil {
-			fmt.Println("Error getting first line:", err)
-		}
-	} else {
-		err = server.Call("Server.GetLastLine", stdstruct.HaloRequest{}, &res)
-		if err != nil {
-			fmt.Println("Error getting last line:", err)
-		}
-	}
-	out <- res.HaloLine
-}
+// // getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
+// func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
+// 	res := stdstruct.HaloResponse{}
+// 	var err error
+// 	if isFirstLine {
+// 		// err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
+// 		err = server.Call("Server.GetFirstLine", stdstruct.HaloRequest{}, &res)
+// 		if err != nil {
+// 			fmt.Println("Error getting first line:", err)
+// 		}
+// 	} else {
+// 		err = server.Call("Server.GetLastLine", stdstruct.HaloRequest{}, &res)
+// 		if err != nil {
+// 			fmt.Println("Error getting last line:", err)
+// 		}
+// 	}
+// 	out <- res.HaloLine
+// }
 
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
@@ -120,25 +120,25 @@ func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse)
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
-	// Two Channels used to recive Halo Area from getHalo()
-	preOut := make(chan []byte)
-	nextOut := make(chan []byte)
-	go getHalo(s.previousServer, false, preOut)
-	go getHalo(s.nextServer, true, nextOut)
+	// // Two Channels used to recive Halo Area from getHalo()
+	// preOut := make(chan []byte)
+	// nextOut := make(chan []byte)
+	// go getHalo(s.previousServer, false, preOut)
+	// go getHalo(s.nextServer, true, nextOut)
 
-	// Wait for neigbour node to send the getHalo() request
-	<- s.firstLineSent
-	<- s.lastLineSent
+	// // Wait for neigbour node to send the getHalo() request
+	// <- s.firstLineSent
+	// <- s.lastLineSent
 
-	topHalo := <-preOut
-	bottomHalo := <-nextOut
+	// topHalo := <-preOut
+	// bottomHalo := <-nextOut
 
 	// height := req.EndY - req.StartY
 	// width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := attendHaloArea(s.height, req.Slice, topHalo, bottomHalo)
-	// currWorld := req.ExtendedSlice
+	// currWorld := attendHaloArea(s.height, req.Slice, topHalo, bottomHalo)
+	currWorld := req.ExtendedSlice
 
 	// world slice without halo area, will return to broker after calculation 
 	nextWorld := req.Slice
