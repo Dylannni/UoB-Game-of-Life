@@ -17,8 +17,8 @@ type GameOfLife struct{
 	width			int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
-	previousNode 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextNode     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了（但是这样就
+	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
 func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
@@ -112,7 +112,7 @@ func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse)
 	s.lastLineSent = make(chan bool)
 	s.height = req.EndY - req.StartY
 	s.width = req.EndX - req.StartX
-	s.previousServer, _ = rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 	fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 	s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
 	fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
