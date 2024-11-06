@@ -72,6 +72,9 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
+		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
+		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
 			World: slice,
 			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
@@ -106,8 +109,8 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		// 	extendedSlice = append(extendedSlice, req.World[endY])
 		// }
 
-		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
-		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+		// preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
+		// nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
 
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
