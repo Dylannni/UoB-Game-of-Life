@@ -17,8 +17,8 @@ type GameOfLife struct{
 	width			int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
-	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了（但是这样就
+	previousNode 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextNode     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了（但是这样就
 }
 
 func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
@@ -30,7 +30,7 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 }
 
 // GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
-func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponsee) (err error) {
+func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
 	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
 	for i, val := range s.world[0] {
@@ -42,7 +42,7 @@ func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloRe
 }
 
 // GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
-func (s *SeGameOfLiferver) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	haloLine := make([]byte, len(s.world[s.height-1]))
 	for i, val := range s.world[s.height-1] {
 		haloLine[i] = val
@@ -68,7 +68,7 @@ func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
 			fmt.Println("Error getting last line:", err)
 		}
 	}
-	out <- res.Line
+	out <- res.HaloLine
 }
 
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
@@ -107,11 +107,11 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 
 func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
 	// init the AWS node, should move these to a seprate function
-	s.world = req.Slice
+	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
 	s.height = req.EndY - req.StartY
-	s.width := req.EndX - req.StartX
+	s.width = req.EndX - req.StartX
 	s.previousServer, _ = rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 	fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 	s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
