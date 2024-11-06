@@ -89,13 +89,18 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			extendedSlice = append(extendedSlice, req.World[endY])
 		}
 
+		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
+		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
 			EndX: 	width,
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
-			ExtendedSlice:  extendedSlice,
+			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
+			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
+			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
