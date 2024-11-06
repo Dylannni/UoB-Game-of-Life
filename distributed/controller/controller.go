@@ -135,8 +135,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// topHalo := <-preOut
 	// bottomHalo := <-nextOut
 
-	// height := req.EndY - req.StartY
-	// width := req.EndX - req.StartX
+	height := req.EndY - req.StartY
+	width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	// currWorld := attendHaloArea(s.height, req.Slice, topHalo, bottomHalo)
