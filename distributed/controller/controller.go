@@ -22,13 +22,13 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
-func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
-	newWorld := make([][]byte, 0, height+2)
-	newWorld = append(newWorld, topHalo)
-	newWorld = append(newWorld, world...)
-	newWorld = append(newWorld, bottom)
-	return newWorld
-}
+// func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
+// 	newWorld := make([][]byte, 0, height+2)
+// 	newWorld = append(newWorld, topHalo)
+// 	newWorld = append(newWorld, world...)
+// 	newWorld = append(newWorld, bottomHalo)
+// 	return newWorld
+// }
 
 // 这两个函数用于获取光环，其实写成一个函数会更好，因为内容重复我就不写两遍注释了
 
