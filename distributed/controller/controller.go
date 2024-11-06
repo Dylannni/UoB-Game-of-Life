@@ -59,12 +59,12 @@ func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
 	var err error
 	if isFirstLine {
 		// err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
-		err = server.Call("Server.GetFirstLine", stdstruct.HaloRequest{}, &res)
+		err = server.Call("GameOfLife.GetFirstLine", stdstruct.HaloRequest{}, &res)
 		if err != nil {
 			fmt.Println("Error getting first line:", err)
 		}
 	} else {
-		err = server.Call("Server.GetLastLine", stdstruct.HaloRequest{}, &res)
+		err = server.Call("GameOfLife.GetLastLine", stdstruct.HaloRequest{}, &res)
 		if err != nil {
 			fmt.Println("Error getting last line:", err)
 		}
