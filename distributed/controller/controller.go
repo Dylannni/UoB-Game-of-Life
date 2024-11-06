@@ -233,7 +233,14 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	fmt.Println("currWorld is equal to extWorld:", worldEqual)
 
 	// world slice without halo area, will return to broker after calculation 
-	nextWorld := req.Slice
+	// nextWorld := req.Slice
+
+	// 初始化 nextWorld
+	nextWorld := make([][]byte, height)
+	for i := range nextWorld {
+		nextWorld[i] = make([]byte, width)
+		copy(nextWorld[i], req.Slice[i])
+	}
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
