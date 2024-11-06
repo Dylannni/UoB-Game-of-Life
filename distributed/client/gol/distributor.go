@@ -60,66 +60,31 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	c.events <- StateChange{turn, Executing}
 
-	// for turn = 0; turn < p.Turns; turn++{
-	// 	c.completedTurns = turn + 1
-
-	// 	//set a channel to collect the results for each worker
-	// 	tempWorld := make([]chan [][]byte, p.Threads)
-	// 	for i := range tempWorld{
-	// 		tempWorld[i] = make (chan [][]byte)
-	// 	}
-
-	// 	//将网格划分成多个部分并分配给每个worker
-	// 	heightPerThread := p.ImageHeight / p.Threads
-	// 	//i -> 第几个worker
-	// 	for i := 0; i < p.Threads; i++{
-	// 		startY := i * heightPerThread
-	// 		endY := startY + heightPerThread
-	// 		if i == p.Threads-1{
-	// 			endY = p.ImageHeight
-	// 		}
-	// 		go worker(startY, endY, world, p, c, tempWorld[i])
-	// 	}
-
-	// 	//combine the results of all workers
-	// 	mergeWorld := initWorld(p.ImageHeight, p.ImageWidth)
-	// 	for i := 0; i < p.Threads; i++ {
-	// 		part := tempWorld[i]
-	// 		mergeWorld = append(mergeWorld, part...)
-	// 	}
-	// 	world = mergeWorld
-
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		//To analyze the performance, the execution time of each turn will be recorded
-		start := time.Now()
+		////To analyze the performance, the execution time of each turn will be recorded
+		//start := time.Now()
 
 		// prepare request for server
-		req := stdstruct.CalRequest{
-			StartY: 0,
-			EndY:   p.ImageHeight,
-			StartX: 0,
-			EndX:   p.ImageWidth,
-			World:  world,
-		}
-		var res stdstruct.CalResponse
+		gameReq := stdstruct.GameRequest{World: world}
+		var gameRes stdstruct.GameResponse
 
-		err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
+		err := client.Call("Broker.RunGol", gameReq, &gameRes)
 		if err != nil {
-			fmt.Println("Error calculating next turn:", err)
+			fmt.Println("Error starting game:", err)
 			return
 		}
 
 		//update the world
-		world = res.World
+		world = gameRes.World
 		c.completedTurns = turn + 1
 
 		//Extension: parallel distributed
 		//In distributor.go, add performance tests for images of different sizes
 		//return time difference
-		elapesdTime := time.Since(start)
-		//Format the execution time of the current turn
-		fmt.Printf("Turn %d took %s\n", turn, elapesdTime)
+		//elapesdTime := time.Since(start)
+		////Format the execution time of the current turn
+		//fmt.Printf("Turn %d took %s\n", turn, elapesdTime)
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
@@ -180,10 +145,10 @@ func distributor(p Params, c distributorChannels) {
 
 	}
 
-	// outputImage(c, p, world)
+	outputImage(c, p, world)
 
 	// // TODO: Report the final state using FinalTurnCompleteEvent.
-	// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle
