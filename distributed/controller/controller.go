@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-
+	"sync"
 	"net"
 	"net/rpc"
 
@@ -19,6 +19,7 @@ type GameOfLife struct{
 	lastLineSent   	chan bool
 	// previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
 	// nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+	mu 				sync.Mutex
 }
 
 func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
@@ -31,6 +32,8 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 
 // GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
 func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
 	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
 	for i, val := range s.world[0] {
@@ -43,6 +46,8 @@ func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloRe
 
 // GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
 func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	height := len(s.world)
 	haloLine := make([]byte, len(s.world[height-1]))
 	for i, val := range s.world[height-1] {
@@ -131,6 +136,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	var previousServer *rpc.Client
 	var nextServer *rpc.Client
+	s.firstLineSent = make(chan bool)
+	s.lastLineSent = make(chan bool)
 
 	previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
 	fmt.Println("Connect to previous halo server ", req.PreviousServer)
@@ -140,6 +147,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// Two Channels used to recive Halo Area from getHalo()
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
+
 	go getHalo(previousServer, false, preOut)
 	go getHalo(nextServer, true, nextOut)
 
