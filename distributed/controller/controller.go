@@ -112,10 +112,12 @@ func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse)
 	s.lastLineSent = make(chan bool)
 	s.height = req.EndY - req.StartY
 	s.width = req.EndX - req.StartX
-	s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
-	fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
+	fmt.Println("Connect to halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+
+	// s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	// s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
+	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
 }
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {

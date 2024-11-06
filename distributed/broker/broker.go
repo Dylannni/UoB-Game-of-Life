@@ -99,6 +99,23 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
+		var extendedSlice [][]byte
+		if startY == 0 {
+			// adding the last row of the last slice to the top
+			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
+		} else {
+			// adding the last row of the last slice to the top
+			extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		}
+
+		if endY == height {
+			// 最后一块切片，添加第一行作为 Ghost Cell
+			extendedSlice = append(extendedSlice, req.World[0])
+		} else {
+			// adding the first row of next slice to the bottom
+			extendedSlice = append(extendedSlice, req.World[endY])
+		}
+
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
 			EndX: 	width,
