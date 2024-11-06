@@ -73,7 +73,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		slice := req.World[startY:endY]
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			World: slice
+			World: slice,
 			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
 			}, &stdstruct.InitResponse{})
