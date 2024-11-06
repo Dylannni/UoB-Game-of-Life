@@ -26,6 +26,7 @@ func (s *GameOfLife) Init(req stdstruct.InitRequest, res *stdstruct.InitResponse
 	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
+	return nil
 }
 
 func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
