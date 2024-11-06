@@ -105,7 +105,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
-			// ExtendedSlice:  extendedSlice,
+			ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
