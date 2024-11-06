@@ -191,7 +191,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	// Two Channels used to recive Halo Area from getHalo()
 
-	extWorld := req.ExtendedSlice
+	// extWorld := req.ExtendedSlice
 
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
