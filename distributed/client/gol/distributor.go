@@ -59,32 +59,38 @@ func distributor(p Params, c distributorChannels) {
 
 	turn := 0
 	c.events <- StateChange{turn, Executing}
+	//
+	var executionTimes []time.Duration
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		////To analyze the performance, the execution time of each turn will be recorded
-		//start := time.Now()
+		//To analyze the performance, the execution time of each turn will be recorded
+		start := time.Now()
 
 		// prepare request for server
-		gameReq := stdstruct.GameRequest{World: world}
-		var gameRes stdstruct.GameResponse
+		req := stdstruct.CalRequest{
+			StartY: 0,
+			EndY:   p.ImageHeight,
+			StartX: 0,
+			EndX:   p.ImageWidth,
+			World:  world,
+		}
+		var res stdstruct.CalResponse
 
-		err := client.Call("Broker.RunGol", gameReq, &gameRes)
+		err := client.Call("GameOfLife.CalculateNextTurn", req, &res)
 		if err != nil {
-			fmt.Println("Error starting game:", err)
+			fmt.Println("Error calculating next turn:", err)
 			return
 		}
 
 		//update the world
-		world = gameRes.World
+		world = res.World
 		c.completedTurns = turn + 1
 
 		//Extension: parallel distributed
 		//In distributor.go, add performance tests for images of different sizes
-		//return time difference
-		//elapesdTime := time.Since(start)
-		////Format the execution time of the current turn
-		//fmt.Printf("Turn %d took %s\n", turn, elapesdTime)
+		executionTimes = append(executionTimes, time.Since(start))
+		fmt.Printf("Turn %d took %s\n", turn, executionTimes[turn])
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
@@ -145,10 +151,11 @@ func distributor(p Params, c distributorChannels) {
 
 	}
 
-	outputImage(c, p, world)
+	// outputImage(c, p, world)
 
 	// // TODO: Report the final state using FinalTurnCompleteEvent.
-	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
+	fmt.Println("Execution times for each turn:", executionTimes)
+	// c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
 	<-c.ioIdle

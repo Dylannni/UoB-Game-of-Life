@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
+	"sync"
 
 	"net"
 	"net/rpc"
@@ -56,59 +58,124 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
-
-	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := req.ExtendedSlice
-
-	// world slice without halo area, will return to broker after calculation
-	nextWorld := req.Slice
-
-	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
-
-	// Iterate over each cell in the world
-	for y := 0; y < height; y++ {
+//worker: Responsible for computing a specified portion of the grid
+func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh chan<- []stdstruct.Cell, wg *sync.WaitGroup) {
+	//使用本地的 aliveCells 列表存储局部计算的活细胞
+	defer wg.Done()
+	localAliveCells := []stdstruct.Cell{}
+	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
-
-			globalY := y + 1
+			globalY := y
 			globalX := x
-			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), len(currWorld[0]))
-			// Apply the Game of Life rules
+			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), width)
+
 			if currWorld[globalY][globalX] == 255 {
-				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
-					nextWorld[y][x] = 0 // Cell dies
+					nextWorld[y][x] = 0
 				} else {
-					nextWorld[y][x] = 255 // Cell stays alive
+					nextWorld[y][x] = 255
+					localAliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				}
 			} else {
-				// Cell is dead
 				if liveNeighbors == 3 {
-					nextWorld[y][x] = 255 // Cell becomes alive
+					nextWorld[y][x] = 255
+					localAliveCells = append(localAliveCells, stdstruct.Cell{X: globalX, Y: globalY})
 				} else {
-					nextWorld[y][x] = 0 // Cell stays dead
+					nextWorld[y][x] = 0
 				}
 			}
 		}
 	}
-	res.Slice = nextWorld
+	resultCh <- localAliveCells
+}
+
+func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
+
+	currWorld := InitWorld(req.EndY, req.EndX)
+	for y := 0; y < req.EndY; y++ {
+		for x := 0; x < req.EndX; x++ {
+			currWorld[y][x] = req.World[y][x]
+		}
+	}
+
+	height := req.EndY - req.StartY
+	width := req.EndX - req.StartX
+	nextWorld := InitWorld(height, width)
+
+	//Gets the number of available CPU cores
+	numWorkers := runtime.NumCPU()
+	heightPerWorker := height / numWorkers
+
+	var wg sync.WaitGroup
+	resultCh := make(chan []stdstruct.Cell, numWorkers)
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		startY := i * heightPerWorker
+		endY := startY + heightPerWorker
+		if i == numWorkers-1 {
+			endY = height //确保最后一个worker 覆盖到网格底层
+		}
+		go worker(startY, endY, currWorld, nextWorld, width, resultCh, &wg)
+
+	}
+	// Wait for all workers to finish
+	go func() {
+		wg.Wait()
+		close(resultCh)
+	}()
+
+	// Collect all alive cells from workers
+	var aliveCells []stdstruct.Cell
+	for cells := range resultCh {
+		aliveCells = append(aliveCells, cells...)
+	}
+
+	//更新结果
+	res.World = nextWorld
+	res.AliveCells = aliveCells
+
+	//// Iterate over each cell in the world
+	//for y := 0; y < height; y++ {
+	//	for x := 0; x < width; x++ {
+	//
+	//		globalY := req.StartY + y
+	//		globalX := req.StartX + x
+	//		// Count the live neighbors
+	//		liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, req.EndY, req.EndX)
+	//		// Apply the Game of Life rules
+	//		if currWorld[globalY][globalX] == 255 {
+	//			// Cell is alive
+	//			if liveNeighbors < 2 || liveNeighbors > 3 {
+	//				nextWorld[y][x] = 0 // Cell dies
+	//			} else {
+	//				nextWorld[y][x] = 255 // Cell stays alive
+	//				res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+	//			}
+	//		} else {
+	//			// Cell is dead
+	//			if liveNeighbors == 3 {
+	//				nextWorld[y][x] = 255 // Cell becomes alive
+	//				res.AliveCells = append(aliveCells, stdstruct.Cell{X: globalX, Y: globalY})
+	//			} else {
+	//				nextWorld[y][x] = 0 // Cell stays dead
+	//			}
+	//		}
+	//	}
+	//}
+	//res.World = nextWorld
 	return nil
+
 }
 
 // shutting down the server when k is pressed
-func (s *GameOfLife) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {
+func (s *GameOfLife) ShutDown(req *stdstruct.ShutRequest, res *stdstruct.ShutResponse) (err error) {
 	fmt.Println("Shutting down the server")
 	os.Exit(0)
 	return nil
 }
 
 func main() {
-	// Usage: go run controller.go -port XXXX
-
-	// Default port 8080
-	pAddr := flag.String("port", "8080", "Port to listen on")
+	pAddr := flag.String("port", "8030", "Port to listen on")
 	flag.Parse()
 	rpc.Register(&GameOfLife{})
 	listener, err := net.Listen("tcp", ":"+*pAddr)
@@ -116,7 +183,6 @@ func main() {
 		panic(err)
 	}
 	defer listener.Close()
-
-	fmt.Println("Controller started, listening on port", *pAddr)
+	fmt.Println("Server Start, Listening on " + listener.Addr().String())
 	rpc.Accept(listener)
 }

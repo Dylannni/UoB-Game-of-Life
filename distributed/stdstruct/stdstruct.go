@@ -12,36 +12,21 @@ type Params struct {
 	ImageHeight int
 }
 
+type CalRequest struct {
+	StartX int
+	EndX   int
+	StartY int
+	EndY   int
+	World  [][]byte
+}
+
+type CalResponse struct {
+	World      [][]byte
+	AliveCells []Cell
+}
+
 type ShutRequest struct {
 }
 
 type ShutResponse struct {
-}
-
-type RegisterRequest struct {
-	Address string
-}
-
-type RegisterResponse struct {
-}
-
-type GameRequest struct {
-	World [][]byte
-}
-
-type GameResponse struct {
-	World [][]byte
-}
-
-type SliceRequest struct {
-	StartX        int
-	EndX          int
-	StartY        int
-	EndY          int
-	Slice         [][]byte
-	ExtendedSlice [][]byte
-}
-
-type SliceResponse struct {
-	Slice [][]byte
 }
