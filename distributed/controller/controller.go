@@ -124,18 +124,28 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 	s.world = req.Slice
 
-	// // Two Channels used to recive Halo Area from getHalo()
-	// preOut := make(chan []byte)
-	// nextOut := make(chan []byte)
-	// go getHalo(s.previousServer, false, preOut)
-	// go getHalo(s.nextServer, true, nextOut)
+	// previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+	// nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
+	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
 
-	// // Wait for neigbour node to send the getHalo() request
-	// <- s.firstLineSent
-	// <- s.lastLineSent
+	previousServer, _= rpc.Dial("tcp", req.PreviousServer)
+	fmt.Println("Connect to previous halo server ", req.PreviousServer)
+	nextServer, _ = rpc.Dial("tcp", req.NextServer)
+	fmt.Println("Connect to next halo server ", req.NextServer)
 
-	// topHalo := <-preOut
-	// bottomHalo := <-nextOut
+	// Two Channels used to recive Halo Area from getHalo()
+	preOut := make(chan []byte)
+	nextOut := make(chan []byte)
+	go getHalo(s.previousServer, false, preOut)
+	go getHalo(s.nextServer, true, nextOut)
+
+	// Wait for neigbour node to send the getHalo() request
+	<- s.firstLineSent
+	<- s.lastLineSent
+
+	topHalo := <-preOut
+	bottomHalo := <-nextOut
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
