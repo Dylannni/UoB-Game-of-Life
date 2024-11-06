@@ -12,13 +12,13 @@ import (
 )
 
 type GameOfLife struct{
-	world 			[][]byte
-	height 			int
-	width			int
-	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
-	lastLineSent   	chan bool
-	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+	// world 			[][]byte
+	// height 			int
+	// width			int
+	// firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
+	// lastLineSent   	chan bool
+	// previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	// nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
 // func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
@@ -105,20 +105,20 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
-	// init the AWS node, should move these to a seprate function
-	s.world = req.World
-	s.firstLineSent = make(chan bool)
-	s.lastLineSent = make(chan bool)
-	s.height = req.EndY - req.StartY
-	s.width = req.EndX - req.StartX
-	fmt.Println("Connect to halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+// func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
+// 	// init the AWS node, should move these to a seprate function
+// 	s.world = req.World
+// 	s.firstLineSent = make(chan bool)
+// 	s.lastLineSent = make(chan bool)
+// 	s.height = req.EndY - req.StartY
+// 	s.width = req.EndX - req.StartX
+// 	fmt.Println("Connect to halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 
-	// s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	// s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
-	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
-}
+// 	// s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+// 	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
+// 	// s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
+// 	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
+// }
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
@@ -146,8 +146,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	nextWorld := req.Slice
 
 	// Iterate over each cell in the world
-	for y := 0; y < s.height; y++ {
-		for x := 0; x < s.width; x++ {
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
 
 			globalY := y + 1
 			globalX := x

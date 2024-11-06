@@ -15,12 +15,12 @@ type Broker struct {
 	connectedNodes int 		 // number of connected node
 }
 
-// type ServerAddress struct {
-// 	Address string
-// 	Port    string
-// }
+type ServerAddress struct {
+	Address string
+	Port    string
+}
 
-var NodesList = [...]stdstruct.ServerAddress{
+var NodesList = [...]ServerAddress{
 	{Address: "44.211.202.200", Port: "8031"},
 	{Address: "3.83.11.239", Port: "8032"},
 	{Address: "3.89.206.35", Port: "8033"},
@@ -71,33 +71,6 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		endY := startY + sliceHeight
 
 		slice := req.World[startY:endY]
-		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
-		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
-
-		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			StartX: 0,
-			EndX: 	width,
-			StartY: startY,
-			EndY:   endY,
-			World:  slice,
-			Threads:        req.Threads,
-			PreviousServer: stdstruct.ServerAddress{NodesList[preNodeIndex].Address, NodesList[preNodeIndex].Port},
-			NextServer:     stdstruct.ServerAddress{NodesList[nextNodeIndex].Address, NodesList[nextNodeIndex].Port},
-		}, &stdstruct.InitResponse{})
-		if err != nil {
-			fmt.Println("Error init :", err)
-		}
-
-		// outChannel := make(chan [][]byte)
-		// outChannels = append(outChannels, outChannel)
-		// go runAWSnode(server, sliceReq, outChannel)
-	}
-
-	for i, server := range b.serverList {
-		startY := i * sliceHeight
-		endY := startY + sliceHeight
-
-		slice := req.World[startY:endY]
 
 		var extendedSlice [][]byte
 		if startY == 0 {
@@ -127,7 +100,63 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
 		go runAWSnode(server, sliceReq, outChannel)
+		// preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
+		// nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+
+		// err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
+		// 	StartX: 0,
+		// 	EndX: 	width,
+		// 	StartY: startY,
+		// 	EndY:   endY,
+		// 	World:  slice,
+		// 	Threads:        req.Threads,
+		// 	PreviousServer: stdstruct.ServerAddress{NodesList[preNodeIndex].Address, NodesList[preNodeIndex].Port},
+		// 	NextServer:     stdstruct.ServerAddress{NodesList[nextNodeIndex].Address, NodesList[nextNodeIndex].Port},
+		// }, &stdstruct.InitResponse{})
+		// if err != nil {
+		// 	fmt.Println("Error init :", err)
+		// }
+
+		// outChannel := make(chan [][]byte)
+		// outChannels = append(outChannels, outChannel)
+		// go runAWSnode(server, sliceReq, outChannel)
 	}
+
+	// for i, server := range b.serverList {
+	// 	startY := i * sliceHeight
+	// 	endY := startY + sliceHeight
+
+	// 	slice := req.World[startY:endY]
+
+	// 	var extendedSlice [][]byte
+	// 	if startY == 0 {
+	// 		// adding the last row of the last slice to the top
+	// 		extendedSlice = append([][]byte{req.World[height-1]}, slice...)
+	// 	} else {
+	// 		// adding the last row of the last slice to the top
+	// 		extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+	// 	}
+
+	// 	if endY == height {
+	// 		// 最后一块切片，添加第一行作为 Ghost Cell
+	// 		extendedSlice = append(extendedSlice, req.World[0])
+	// 	} else {
+	// 		// adding the first row of next slice to the bottom
+	// 		extendedSlice = append(extendedSlice, req.World[endY])
+	// 	}
+
+	// 	sliceReq := stdstruct.SliceRequest{
+	// 		StartX: 0,
+	// 		EndX: 	width,
+	// 		StartY: startY,
+	// 		EndY:   endY,
+	// 		Slice:  slice,
+	// 		ExtendedSlice:  extendedSlice,
+	// 	}
+	// 	outChannel := make(chan [][]byte)
+	// 	outChannels = append(outChannels, outChannel)
+	// 	go runAWSnode(server, sliceReq, outChannel)
+	// }
 
 	// Merge results
 	newWorld := make([][]byte, 0, height)
