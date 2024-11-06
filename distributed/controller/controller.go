@@ -8,6 +8,9 @@ import (
 	"net"
 	"net/rpc"
 
+	"bytes"
+
+
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
@@ -187,10 +190,20 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
 
+	
+	// 比较 topHalo 和 extWorld 的第一行
 	fmt.Println("Top Halo Line!!!!")
-	fmt.Println(topHalo == extWorld[0])
-	fmt.Println("Bottom Halo Line!!!!")
-	fmt.Println(topHalo == extWorld[-1])
+	fmt.Println(bytes.Equal(topHalo, extWorld[0]))
+
+	// 比较 bottomHalo 和 extWorld 的最后一行
+	if len(extWorld) > 0 {
+		lastIndex := len(extWorld) - 1
+		fmt.Println("Bottom Halo Line!!!!")
+		fmt.Println(bytes.Equal(bottomHalo, extWorld[lastIndex]))
+	} else {
+		fmt.Println("Error: extWorld is empty.")
+	}
+
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
