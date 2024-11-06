@@ -129,7 +129,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
 	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
 
-	previousServer, _= rpc.Dial("tcp", req.PreviousServer)
+	var previousServer *rpc.Client
+	var nextServer *rpc.Client
+
+	previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
 	fmt.Println("Connect to previous halo server ", req.PreviousServer)
 	nextServer, _ = rpc.Dial("tcp", req.NextServer)
 	fmt.Println("Connect to next halo server ", req.NextServer)
