@@ -72,7 +72,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		err := server.Call("GameOfLife.Init", initReq{World: slice}, initRes{})
+		err := server.Call("GameOfLife.Init", stdstruct.initReq{World: slice}, stdstruct.initRes{})
 		if err != nil {
 			fmt.Println("Error init GameOfLife:", err)
 		}
