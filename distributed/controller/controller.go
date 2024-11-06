@@ -22,6 +22,12 @@ type GameOfLife struct{
 	mu 				sync.Mutex
 }
 
+func (s *GameOfLife) Init(req stdstruct.InitRequest, res *stdstruct.InitResponse) (err error) {
+	s.world = req.World
+	s.firstLineSent = make(chan bool)
+	s.lastLineSent = make(chan bool)
+}
+
 func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
 	newWorld := make([][]byte, 0, height+2)
 	newWorld = append(newWorld, topHalo)
@@ -63,7 +69,6 @@ func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
 	res := stdstruct.HaloResponse{}
 	var err error
 	if isFirstLine {
-		// err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
 		err = server.Call("GameOfLife.GetFirstLine", stdstruct.HaloRequest{}, &res)
 		if err != nil {
 			fmt.Println("Error getting first line:", err)
@@ -127,7 +132,6 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 // }
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
-	s.world = req.Slice
 
 	// previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
 	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
@@ -136,8 +140,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	var previousServer *rpc.Client
 	var nextServer *rpc.Client
-	s.firstLineSent = make(chan bool)
-	s.lastLineSent = make(chan bool)
+
 
 	// previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
 	previousServer, err = rpc.Dial("tcp", req.PreviousServer)
@@ -153,7 +156,6 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		return fmt.Errorf("failed to connect to next server: %v", err)
 	}
 	fmt.Println("Connect to next halo server ", req.PreviousServer)
-
 
 	// Two Channels used to recive Halo Area from getHalo()
 	preOut := make(chan []byte)

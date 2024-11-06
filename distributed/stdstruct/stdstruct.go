@@ -53,6 +53,21 @@ type GameResponse struct {
 // type InitResponse struct {
 // }
 
+type InitRequest struct {
+	// StartX int
+	// EndX   int
+	// StartY int
+	// EndY   int
+	World  [][]byte
+	// // ExtendedSlice  [][]byte
+	// Threads int
+	// PreviousServer ServerAddress
+	// NextServer     ServerAddress
+}
+
+type InitResponse struct {
+}
+
 type SliceRequest struct {
 	StartX int
 	EndX   int

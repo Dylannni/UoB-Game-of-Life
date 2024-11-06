@@ -72,22 +72,35 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		var extendedSlice [][]byte
-		if startY == 0 {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		} else {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		err := server.Call("GameOfLife.Init", initReq{World: slice}, initRes{})
+		if err != nil {
+			fmt.Println("Error init GameOfLife:", err)
 		}
+	}
 
-		if endY == height {
-			// 最后一块切片，添加第一行作为 Ghost Cell
-			extendedSlice = append(extendedSlice, req.World[0])
-		} else {
-			// adding the first row of next slice to the bottom
-			extendedSlice = append(extendedSlice, req.World[endY])
-		}
+
+	for i, server := range b.serverList {
+		startY := i * sliceHeight
+		endY := startY + sliceHeight
+
+		slice := req.World[startY:endY]
+
+		// var extendedSlice [][]byte
+		// if startY == 0 {
+		// 	// adding the last row of the last slice to the top
+		// 	extendedSlice = append([][]byte{req.World[height-1]}, slice...)
+		// } else {
+		// 	// adding the last row of the last slice to the top
+		// 	extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		// }
+
+		// if endY == height {
+		// 	// 最后一块切片，添加第一行作为 Ghost Cell
+		// 	extendedSlice = append(extendedSlice, req.World[0])
+		// } else {
+		// 	// adding the first row of next slice to the bottom
+		// 	extendedSlice = append(extendedSlice, req.World[endY])
+		// }
 
 		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
 		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
