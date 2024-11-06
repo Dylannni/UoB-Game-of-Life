@@ -190,20 +190,19 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
 
-	
+
 	// 比较 topHalo 和 extWorld 的第一行
-	fmt.Println("Top Halo Line!!!!")
-	fmt.Println(bytes.Equal(topHalo, extWorld[0]))
+	// fmt.Println("Top Halo Line!!!!")
+	// fmt.Println(bytes.Equal(topHalo, extWorld[0]))
 
 	// 比较 bottomHalo 和 extWorld 的最后一行
-	if len(extWorld) > 0 {
-		lastIndex := len(extWorld) - 1
-		fmt.Println("Bottom Halo Line!!!!")
-		fmt.Println(bytes.Equal(bottomHalo, extWorld[lastIndex]))
-	} else {
-		fmt.Println("Error: extWorld is empty.")
-	}
-
+	// if len(extWorld) > 0 {
+	// 	lastIndex := len(extWorld) - 1
+	// 	fmt.Println("Bottom Halo Line!!!!")
+	// 	fmt.Println(bytes.Equal(bottomHalo, extWorld[lastIndex]))
+	// } else {
+	// 	fmt.Println("Error: extWorld is empty.")
+	// }
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
@@ -211,6 +210,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// world slice with two extra row (one at the top and one at the bottom)
 	currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 	// currWorld := req.ExtendedSlice
+
+	fmt.Println("Halo World!!!!")
+
+	fmt.Println(bytes.Equal(currWorld, extWorld))
 
 	// world slice without halo area, will return to broker after calculation 
 	nextWorld := req.Slice
