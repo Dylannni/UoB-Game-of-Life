@@ -139,10 +139,21 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
 
-	previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
+	// previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
+	previousServer, err = rpc.Dial("tcp", req.PreviousServer)
+	if err != nil {
+		return fmt.Errorf("failed to connect to previous server: %v", err)
+	}
 	fmt.Println("Connect to previous halo server ", req.PreviousServer)
-	nextServer, _ = rpc.Dial("tcp", req.NextServer)
-	fmt.Println("Connect to next halo server ", req.NextServer)
+	// nextServer, _ = rpc.Dial("tcp", req.NextServer)
+	// fmt.Println("Connect to next halo server ", req.NextServer)
+
+	nextServer, err = rpc.Dial("tcp", req.NextServer)
+	if err != nil {
+		return fmt.Errorf("failed to connect to next server: %v", err)
+	}
+	fmt.Println("Connect to next halo server ", req.PreviousServer)
+
 
 	// Two Channels used to recive Halo Area from getHalo()
 	preOut := make(chan []byte)
