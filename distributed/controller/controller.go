@@ -188,9 +188,9 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	bottomHalo := <-nextOut
 
 	fmt.Println("Top Halo Line!!!!")
-	fmt.Println(topHalo == req.extendedSlice[0])
+	fmt.Println(topHalo == extWorld[0])
 	fmt.Println("Bottom Halo Line!!!!")
-	fmt.Println(topHalo == req.extendedSlice[-1])
+	fmt.Println(topHalo == extWorld[-1])
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
