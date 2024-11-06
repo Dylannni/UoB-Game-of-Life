@@ -92,6 +92,11 @@ func distributor(p Params, c distributorChannels) {
 		executionTimes = append(executionTimes, time.Since(start))
 		fmt.Printf("Turn %d took %s\n", turn, executionTimes[turn])
 
+		//update alive cells
+		for _, cell := range res.AliveCells {
+			c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: cell.X, Y: cell.Y}}
+		}
+
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		select {

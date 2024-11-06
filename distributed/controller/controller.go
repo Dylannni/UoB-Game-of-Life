@@ -59,10 +59,14 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 }
 
 //worker: Responsible for computing a specified portion of the grid
-func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh chan<- []stdstruct.Cell, wg *sync.WaitGroup) {
+//workerID :这样每个worker在输出调试信息时，都会附带一个 workerID
+func worker(workerID, startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh chan<- []stdstruct.Cell, wg *sync.WaitGroup) {
 	//使用本地的 aliveCells 列表存储局部计算的活细胞
 	defer wg.Done()
 	localAliveCells := []stdstruct.Cell{}
+
+	fmt.Printf("Worker %d processing rows %d to %d\n", workerID, startY, endY-1)
+
 	for y := startY; y < endY; y++ {
 		for x := 0; x < width; x++ {
 			globalY := y
@@ -86,6 +90,8 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh
 			}
 		}
 	}
+	// Debug: Print alive cells found by this worker
+	fmt.Printf("Worker %d alive cells: %v\n", workerID, localAliveCells)
 	resultCh <- localAliveCells
 }
 
@@ -95,12 +101,6 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 	nextWorld := InitWorld(height, width)
-
-	for y := 0; y < req.EndY; y++ {
-		for x := 0; x < req.EndX; x++ {
-			currWorld[y][x] = req.World[y][x]
-		}
-	}
 
 	//Gets the number of available CPU cores
 	numWorkers := runtime.NumCPU()
@@ -115,7 +115,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 		if i == numWorkers-1 {
 			endY = height //确保最后一个worker 覆盖到网格底层
 		}
-		go worker(startY, endY, currWorld, nextWorld, width, resultCh, &wg)
+		go worker(i, startY, endY, currWorld, nextWorld, width, resultCh, &wg)
 
 	}
 	// Wait for all workers to finish
@@ -128,6 +128,22 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct
 	var aliveCells []stdstruct.Cell
 	for cells := range resultCh {
 		aliveCells = append(aliveCells, cells...)
+	}
+
+	// Debug: Print all alive cells after gathering results from all workers
+	fmt.Printf("All alive cells after this turn: %v\n", aliveCells)
+
+	// Debug: Print the next world state after the turn
+	fmt.Println("Next world state:")
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if nextWorld[y][x] == 255 {
+				fmt.Print("█")
+			} else {
+				fmt.Print(" ")
+			}
+		}
+		fmt.Println()
 	}
 
 	//更新结果
