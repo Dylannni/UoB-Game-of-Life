@@ -191,7 +191,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	// Two Channels used to recive Halo Area from getHalo()
 
-	// extWorld := req.ExtendedSlice
+	extWorld := req.ExtendedSlice
 
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
@@ -203,8 +203,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	<- s.firstLineSent
 	<- s.lastLineSent
 
-	// topHalo := <-preOut
-	// bottomHalo := <-nextOut
+	topHalo := <-preOut
+	bottomHalo := <-nextOut
 
 
 	// 比较 topHalo 和 extWorld 的第一行
@@ -224,13 +224,13 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
-	// currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
-	currWorld := req.ExtendedSlice
+	currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
+	// currWorld := req.ExtendedSlice
 
 	// 比较整个世界（可选）
-	// fmt.Println("Halo World Comparison:")
-	// worldEqual := compareWorlds(currWorld, extWorld)
-	// fmt.Println("currWorld is equal to extWorld:", worldEqual)
+	fmt.Println("Halo World Comparison:")
+	worldEqual := compareWorlds(currWorld, extWorld)
+	fmt.Println("currWorld is equal to extWorld:", worldEqual)
 
 	// world slice without halo area, will return to broker after calculation 
 	nextWorld := req.Slice
