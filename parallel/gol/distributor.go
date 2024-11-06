@@ -10,14 +10,15 @@ import (
 )
 
 type distributorChannels struct {
-	events         chan<- Event
-	ioCommand      chan<- ioCommand
-	ioIdle         <-chan bool
-	ioFilename     chan<- string
-	ioOutput       chan<- uint8
-	ioInput        <-chan uint8
+	events         Event
+	ioCommand      ioCommand
+	ioIdle         bool
+	ioFilename     string
+	ioOutput       uint8
+	ioInput        uint8
 	completedTurns int
-	keyPresses     <-chan rune
+	keyPresses     rune
+	shared         shareState // Implements shared state between distributor and io goroutine
 }
 
 var mu sync.Mutex

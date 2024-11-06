@@ -5,23 +5,48 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
-type ioChannels struct {
-	command <-chan ioCommand
-	idle    chan<- bool
+type shareState struct {
+	commandLock sync.Mutex // control access to shared variables
+	command     ioCommand
+	commandCond *sync.Cond // condition variable -allows goroutine to wait for a specific condition (such as data being ready) to hold.
 
-	filename <-chan string
-	output   <-chan uint8
-	input    chan<- uint8
+	idleLock sync.Mutex
+	idle     bool
+	idleCond *sync.Cond
+
+	filenameLock sync.Mutex
+	filename     string
+	filenameCond *sync.Cond
+
+	outputLock sync.Mutex
+	output     uint8
+	outputCond *sync.Cond
+
+	inputLock sync.Mutex
+	input     uint8
+	inputCond *sync.Cond
 }
 
 // ioState is the internal ioState of the io goroutine.
 type ioState struct {
-	params   Params
-	channels ioChannels
+	params Params
+	shared *shareState
+}
+
+func NewShareState() *shareState {
+	ioState := &shareState{}
+	ioState.commandCond = sync.NewCond(&ioState.commandLock)
+	ioState.idleCond = sync.NewCond(&ioState.idleLock)
+	ioState.filenameCond = sync.NewCond(&ioState.filenameLock)
+	ioState.outputCond = sync.NewCond(&ioState.outputLock)
+	ioState.inputCond = sync.NewCond(&ioState.inputLock)
+	return ioState
+
 }
 
 // ioCommand allows requesting behaviour from the io (pgm) goroutine.
@@ -44,7 +69,13 @@ func (io *ioState) writePgmImage() {
 	_ = os.Mkdir("out", os.ModePerm)
 
 	// Request a filename from the distributor.
-	filename := <-io.channels.filename
+	//filename := <-io.channels.filename
+	io.shared.filenameLock.Lock()
+	defer io.shared.filenameLock.Unlock()
+	for io.shared.filename == "" {
+		io.shared.filenameCond.Wait()
+	}
+	filename := io.shared.filename
 
 	file, ioError := os.Create("out/" + filename + ".pgm")
 	util.Check(ioError)
@@ -66,10 +97,18 @@ func (io *ioState) writePgmImage() {
 
 	for y := 0; y < io.params.ImageHeight; y++ {
 		for x := 0; x < io.params.ImageWidth; x++ {
-			val := <-io.channels.output
+			//val := <-io.channels.output
 			//if val != 0 {
 			//	fmt.Println(x, y)
 			//}
+			io.shared.outputLock.Lock()
+			defer io.shared.outputLock.Unlock()
+			for io.shared.output == 0 {
+				io.shared.outputCond.Wait() // wait for output update
+			}
+			val := io.shared.output
+			io.shared.outputCond.Signal() //signal other goroutine
+
 			world[y][x] = val
 		}
 	}
@@ -91,7 +130,13 @@ func (io *ioState) writePgmImage() {
 func (io *ioState) readPgmImage() {
 
 	// Request a filename from the distributor.
-	filename := <-io.channels.filename
+	//filename := <-io.channels.filename
+	io.shared.filenameLock.Lock()
+	defer io.shared.filenameLock.Unlock()
+	for io.shared.filename == "" {
+		io.shared.filenameCond.Wait()
+	}
+	filename := io.shared.filename
 
 	data, ioError := os.ReadFile("images/" + filename + ".pgm")
 	util.Check(ioError)
@@ -120,20 +165,27 @@ func (io *ioState) readPgmImage() {
 	image := []byte(fields[4])
 
 	for _, b := range image {
-		io.channels.input <- b
+		//io.channels.input <- b
+		io.shared.inputLock.Lock()
+		defer io.shared.inputLock.Unlock()
+		io.shared.input = b
+		io.shared.inputCond.Signal()
 	}
 
 	fmt.Println("File", filename, "input done!")
 }
 
 // startIo should be the entrypoint of the io goroutine.
-func startIo(p Params, c ioChannels) {
+func startIo(p Params, shared *shareState) {
 	io := ioState{
-		params:   p,
-		channels: c,
+		params: p,
+		shared: shared,
 	}
 
-	for command := range io.channels.command {
+	for {
+		io.shared.commandLock.Lock()
+		command := io.shared.command
+		io.shared.commandLock.Unlock()
 		// Block and wait for requests from the distributor
 		switch command {
 		case ioInput:
@@ -141,7 +193,11 @@ func startIo(p Params, c ioChannels) {
 		case ioOutput:
 			io.writePgmImage()
 		case ioCheckIdle:
-			io.channels.idle <- true
+			//io.channels.idle <- true
+			io.shared.idleLock.Lock()
+			io.shared.idle = true
+			io.shared.idleCond.Signal()
+			io.shared.idleLock.Unlock()
 		}
 	}
 }
