@@ -72,7 +72,11 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{World: slice}, &stdstruct.InitResponse{})
+		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
+			World: slice
+			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
+			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
+			}, &stdstruct.InitResponse{})
 		if err != nil {
 			fmt.Println("Error init GameOfLife:", err)
 		}
@@ -111,8 +115,8 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
-			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
-			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
+			// PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
+			// NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
 			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
