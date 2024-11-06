@@ -34,7 +34,7 @@ func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) 
 	if err != nil {
 		return fmt.Errorf("failed to connect to next server: %v", err)
 	}
-	fmt.Println("Connect to next halo server ", req.nextServer)
+	fmt.Println("Connect to next halo server ", req.NextServer)
 
 
 	s.world = req.World
@@ -188,9 +188,9 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	bottomHalo := <-nextOut
 
 	fmt.Println("Top Halo Line!!!!")
-	fmt.Println(topHalo == extendedSlice[0])
+	fmt.Println(topHalo == req.extendedSlice[0])
 	fmt.Println("Bottom Halo Line!!!!")
-	fmt.Println(topHalo == extendedSlice[-1])
+	fmt.Println(topHalo == req.extendedSlice[-1])
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
