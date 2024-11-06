@@ -12,11 +12,6 @@ type Params struct {
 	ImageHeight int
 }
 
-//type CalResponse struct {
-//	World      [][]byte
-//	AliveCells []Cell
-//}
-
 type ShutRequest struct {
 }
 
