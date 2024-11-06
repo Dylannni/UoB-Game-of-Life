@@ -147,6 +147,22 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 // 	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
 // }
 
+
+
+func compareWorlds(world1, world2 [][]byte) bool {
+    if len(world1) != len(world2) {
+        return false
+    }
+    for i := range world1 {
+        if !bytes.Equal(world1[i], world2[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+
+
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
 	// previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
@@ -211,9 +227,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 	// currWorld := req.ExtendedSlice
 
-	fmt.Println("Halo World!!!!")
-
-	fmt.Println(bytes.Equal(currWorld, extWorld))
+	// 比较整个世界（可选）
+	fmt.Println("Halo World Comparison:")
+	worldEqual := compareWorlds(currWorld, extWorld)
+	fmt.Println("currWorld is equal to extWorld:", worldEqual)
 
 	// world slice without halo area, will return to broker after calculation 
 	nextWorld := req.Slice
