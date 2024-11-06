@@ -20,14 +20,13 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "44.203.150.15", Port: "8031"},
-	{Address: "54.86.171.180", Port: "8032"},
-	{Address: "3.81.248.33", Port: "8033"},
-	{Address: "54.89.239.8", Port: "8034"},
-	// {Address: "54.156.70.166", Port: "8035"},
+	{Address: "44.211.202.200", Port: "8031"},
+	{Address: "3.83.11.239", Port: "8032"},
+	{Address: "3.89.206.35", Port: "8033"},
+	{Address: "23.23.24.46", Port: "8034"},
 }
 
-func (b *Broker) initializeNodes() {
+func (b *Broker) initNodes() {
 	numNodes := len(NodesList)
 	if len(b.serverList) == 0 {
 		b.serverList = make([]*rpc.Client, 0, numNodes)
@@ -51,7 +50,7 @@ func (b *Broker) initializeNodes() {
 
 // RunGol distributes the game world to controllers and collects results
 func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse) error {
-	b.initializeNodes()
+	b.initNodes()
 
 	numServers := len(b.serverList)
 	if numServers == 0 {
@@ -62,18 +61,17 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	width := len(req.World[0])
 	sliceHeight := height / numServers
 
-	results := make([][][]byte, numServers)
-	errors := make([]error, numServers)
+	// results := make([][][]byte, numServers)
+	var outChannels []chan [][]byte
+	// errors := make([]error, numServers)
 
-	for i, client := range b.serverList {
+	for i, server := range b.serverList {
 
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
 
-		 // 提取当前切片
 		slice := req.World[startY:endY]
 
-		// 声明并初始化 extendedSlice
 		var extendedSlice [][]byte
 		if startY == 0 {
 			// adding the last row of the last slice to the top
@@ -99,25 +97,40 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			Slice:  slice,
 			ExtendedSlice:  extendedSlice,
 		}
-		var sliceRes stdstruct.SliceResponse
-		err := client.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
-		if err != nil {
-			fmt.Println("Error processing slice:", err)
-			errors[i] = err
-		}
-		fmt.Printf("Worker %d processed rows %d to %d\n", i, startY, endY)
+		outChannel := make(chan [][]byte)
+		outChannels = append(outChannels, outChannel)
+		// var sliceRes stdstruct.SliceResponse
+		// go err := client.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
+		go runAWSnode(server, sliceReq, outChannel)
 
-		results[i] = sliceRes.Slice
+		// if err != nil {
+		// 	fmt.Println("Error processing slice:", err)
+		// 	errors[i] = err
+		// }
+		// fmt.Printf("Worker %d processed rows %d to %d\n", i, startY, endY)
+
+		// results[i] = sliceRes.Slice
 	}
 
 	// Merge results
 	newWorld := make([][]byte, 0, height)
 	for i := 0; i < numServers; i++ {
-		newWorld = append(newWorld, results[i]...)
+		newWorld = append(newWorld, <-outChannels[i]...)
 	}
 
 	res.World = newWorld
 	return nil
+}
+
+func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte) {
+	var sliceRes stdstruct.SliceResponse
+	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
+
+	if err != nil {
+		fmt.Println("Error processing slice:", err)
+		// errors[i] = err
+	}
+	out <- sliceRes.Slice
 }
 
 func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {

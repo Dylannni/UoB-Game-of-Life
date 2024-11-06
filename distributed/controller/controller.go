@@ -22,6 +22,55 @@ func InitWorld(height, width int) [][]byte {
 	return world
 }
 
+func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]byte {
+	newWorld := make([][]byte, 0, height+2)
+	newWorld = append(newWorld, topHalo)
+	newWorld = append(newWorld, world...)
+	newWorld = append(newWorld, bottom)
+	return newWorld
+}
+
+// 这两个函数用于获取光环，其实写成一个函数会更好，因为内容重复我就不写两遍注释了
+
+// // GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
+// func (s *GameOfLife) GetFirstLine(_ stubs.LineRequest, res *stubs.LineResponse) (err error) {
+// 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
+// 	line := make([]uint8, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
+// 	for i, value := range s.world[0] {
+// 		line[i] = value // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
+// 	}
+// 	res.Line = line
+// 	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
+// 	return
+// }
+
+// // GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
+// func (s *SeGameOfLiferver) GetLastLine(_ stubs.LineRequest, res *stubs.LineResponse) (err error) {
+// 	line := make([]uint8, len(s.world[s.height-1]))
+// 	for i, value := range s.world[s.height-1] {
+// 		line[i] = value
+// 	}
+// 	res.Line = line
+// 	s.lastLineSent <- true
+// 	return
+// }
+
+// // getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
+// func getHalo(server *rpc.Client, isFirstLine bool, out chan []uint8) {
+// 	res := stubs.LineResponse{}
+// 	var err error
+// 	if isFirstLine {
+// 		err = server.Call("Server.GetFirstLine", stubs.LineRequest{}, &res)
+// 	} else {
+// 		err = server.Call("Server.GetLastLine", stubs.LineRequest{}, &res)
+// 	}
+// 	if err != nil {
+// 		handleError(err)
+// 	}
+// 	out <- res.Line
+// }
+
+
 // countLiveNeighbors calculates the number of live neighbors for a given cell.
 // Parameters:
 //   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
