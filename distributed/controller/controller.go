@@ -91,16 +91,16 @@ func worker(startY, endY int, currWorld, nextWorld [][]byte, width int, resultCh
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.CalRequest, res *stdstruct.CalResponse) (err error) {
 
-	currWorld := InitWorld(req.EndY, req.EndX)
+	currWorld := req.World
+	height := req.EndY - req.StartY
+	width := req.EndX - req.StartX
+	nextWorld := InitWorld(height, width)
+
 	for y := 0; y < req.EndY; y++ {
 		for x := 0; x < req.EndX; x++ {
 			currWorld[y][x] = req.World[y][x]
 		}
 	}
-
-	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
-	nextWorld := InitWorld(height, width)
 
 	//Gets the number of available CPU cores
 	numWorkers := runtime.NumCPU()
