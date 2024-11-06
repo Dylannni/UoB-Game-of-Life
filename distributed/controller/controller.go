@@ -137,8 +137,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	// Two Channels used to recive Halo Area from getHalo()
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
-	go getHalo(s.previousServer, false, preOut)
-	go getHalo(s.nextServer, true, nextOut)
+	go getHalo(previousServer, false, preOut)
+	go getHalo(nextServer, true, nextOut)
 
 	// Wait for neigbour node to send the getHalo() request
 	<- s.firstLineSent
