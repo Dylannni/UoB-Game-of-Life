@@ -22,7 +22,7 @@ type GameOfLife struct{
 	mu 				sync.Mutex
 }
 
-func (s *GameOfLife) Init(req stdstruct.InitRequest, res *stdstruct.InitResponse) (err error) {
+func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
 	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
