@@ -203,8 +203,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	<- s.firstLineSent
 	<- s.lastLineSent
 
-	topHalo := <-preOut
-	bottomHalo := <-nextOut
+	// topHalo := <-preOut
+	// bottomHalo := <-nextOut
 
 
 	// 比较 topHalo 和 extWorld 的第一行
