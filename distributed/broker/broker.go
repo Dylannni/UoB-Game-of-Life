@@ -76,7 +76,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			Height: endY - StartY
+			Height: endY - startY,
 			World: slice,
 			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
