@@ -186,12 +186,15 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		nextWorld[i] = make([]byte, width)
 		copy(nextWorld[i], req.Slice[i])
 	}
+
+	fmt.Println("Next WORLD CREATED")
 	
 
 	tempWorld := make([]chan [][]byte, s.threads)
 	for i := range tempWorld {
 		tempWorld[i] = make(chan [][]byte)
 	}
+	fmt.Println("TEMP WORLD CREATED")
 
 	heightPerThread := height / s.threads
 
@@ -204,6 +207,8 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	for i := range mergeWorld {
 		mergeWorld[i] = make([]byte, width)
 	}
+	
+	fmt.Println("MERGE WORLD CREATED")
 
 	for i := 0; i < s.threads; i++ {
 		pieces := <-tempWorld[i]
