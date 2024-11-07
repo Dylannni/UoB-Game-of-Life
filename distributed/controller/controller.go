@@ -205,7 +205,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		mergeWorld[i] = make([]byte, width)
 	}
 
-	for i := 0; i < p.Threads; i++ {
+	for i := 0; i < s.threads; i++ {
 		pieces := <-tempWorld[i]
 		mergeWorld = append(mergeWorld, pieces...)
 	}
