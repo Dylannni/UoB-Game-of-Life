@@ -1,7 +1,7 @@
 package gol
 
 import (
-	"fmt"
+	//"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -27,7 +27,7 @@ func worker(startY, endY, startX, endX int, p Params, world [][]byte, c distribu
 	(*tempWorld)[i] = worldPart
 	mu.Unlock()
 
-	fmt.Printf("Worker %d finished\n", i)
+	//fmt.Printf("Worker %d finished\n", i)
 }
 
 // send the world into output
@@ -35,15 +35,16 @@ func outputImage(c distributorChannels, p Params, world [][]byte) {
 	//c.ioCommand <- ioOutput
 	c.shared.commandLock.Lock()
 	c.shared.command = ioOutput
-	fmt.Println("distributor: Sending ioOutput command")
+	c.shared.commandReady = true
+	//fmt.Println("distributor: Sending ioOutput command")
 	c.shared.commandCond.Signal()
 	c.shared.commandLock.Unlock()
 
 	c.shared.filenameLock.Lock()
 	c.shared.filename = strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth), strconv.Itoa(c.completedTurns)}, "x")
 	//c.ioFilename <- filename
-
-	fmt.Printf("outputImage: Filename set to %s\n", c.shared.filename)
+	c.shared.filenameReady = true
+	//fmt.Printf("outputImage: Filename set to %s\n", c.shared.filename)
 	c.shared.filenameCond.Signal()
 	c.shared.filenameLock.Unlock()
 
@@ -52,10 +53,10 @@ func outputImage(c distributorChannels, p Params, world [][]byte) {
 			//c.ioOutput <- world[y][x]
 			c.shared.outputLock.Lock()
 			c.shared.output = world[y][x]
-			fmt.Printf("outputImage: Output data set for cell (%d, %d) with value %d\n", y, x, world[y][x])
+			c.shared.outputReady = true
+			//fmt.Printf("outputImage: Output data set for cell (%d, %d) with value %d\n", y, x, world[y][x])
 			c.shared.outputCond.Signal()
-			c.shared.outputCond.Signal()
-			for c.shared.output != 0 {
+			for c.shared.outputReady {
 				c.shared.outputCond.Wait()
 			}
 			c.shared.outputLock.Unlock()
@@ -64,7 +65,8 @@ func outputImage(c distributorChannels, p Params, world [][]byte) {
 
 	c.shared.commandLock.Lock()
 	c.shared.command = ioCheckIdle
-	fmt.Println("distributor: Sending ioCheckIdle (exit) command")
+	c.shared.commandReady = true
+	//fmt.Println("distributor: Sending ioCheckIdle (exit) command")
 	c.shared.commandCond.Signal()
 	c.shared.commandLock.Unlock()
 
@@ -89,13 +91,15 @@ func distributor(p Params, c distributorChannels) {
 	//c.ioCommand <- ioInput
 	c.shared.commandLock.Lock()
 	c.shared.command = ioInput
-	fmt.Println("distributor: Sending ioInput command")
+	c.shared.commandReady = true
+	//fmt.Println("distributor: Sending ioInput command")
 	c.shared.commandCond.Signal()
 	c.shared.commandLock.Unlock()
 
 	c.shared.filenameLock.Lock()
 
 	c.shared.filename = strings.Join([]string{strconv.Itoa(p.ImageHeight), strconv.Itoa(p.ImageWidth)}, "x")
+	c.shared.filenameReady = true
 	c.shared.filenameCond.Signal()
 	c.shared.filenameLock.Unlock()
 
@@ -104,34 +108,32 @@ func distributor(p Params, c distributorChannels) {
 		for x := 0; x < p.ImageWidth; x++ {
 			c.shared.inputLock.Lock()
 
-			for c.shared.input == 0 {
+			for !c.shared.inputReady {
+				//fmt.Println("distributor: Waiting for input data...")
 				c.shared.inputCond.Wait()
 			}
 			//val := <-c.ioInput
 			world[y][x] = c.shared.input
-			fmt.Printf("distributor: Input data received for cell (%d, %d): %d\n", y, x, c.shared.input)
-			//world[y][x] = val
-			c.shared.input = 0
-			fmt.Printf("distributor: Signaling input reset for cell (%d, %d)\n", y, x)
+			//fmt.Printf("distributor: Input data received for cell (%d, %d): %d\n", y, x, c.shared.input)
+			c.shared.inputReady = false
+			//fmt.Printf("distributor: Signaling input reset for cell (%d, %d)\n", y, x)
 			c.shared.inputCond.Signal()
 			c.shared.inputLock.Unlock()
 
-			fmt.Println("recieve alive cells")
+			//fmt.Println("recieve alive cells")
 			if world[y][x] == 255 {
 				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
-				fmt.Println("done")
+
 			}
 		}
 	}
 
 	turn := 0
-	fmt.Println("set p = 0")
 	c.events <- StateChange{turn, Executing}
-	fmt.Println("distributor: Starting main simulation loop")
+	//fmt.Println("distributor: Starting main simulation loop")
 
 	// TODO: Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
-		fmt.Printf("distributor: Starting turn %d\n", turn)
 		c.completedTurns = turn + 1
 
 		if p.Threads == 1 {
@@ -148,13 +150,16 @@ func distributor(p Params, c distributorChannels) {
 			var wg sync.WaitGroup
 			for i := 0; i < p.Threads-1; i++ {
 				wg.Add(1)
+				//fmt.Printf("distributor: Starting worker %d\n", i)
 				go worker(i*heightPerThread, (i+1)*heightPerThread, 0, p.ImageWidth, p, world, c, &tempWorld, i, &wg)
 			}
 			wg.Add(1)
+			//fmt.Printf("distributor: Starting last worker\n")
 			go worker((p.Threads-1)*heightPerThread, p.ImageHeight, 0, p.ImageWidth, p, world, c, &tempWorld, p.Threads-1, &wg)
 
 			//wait all the workers to finish
 			wg.Wait()
+			//fmt.Println("distributor: All workers finished")
 
 			mergeWorld := initWorld(0, 0)
 			for i := 0; i < p.Threads; i++ {
@@ -164,23 +169,28 @@ func distributor(p Params, c distributorChannels) {
 		}
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
-		fmt.Printf("distributor: Turn %d complete\n", turn)
+		//fmt.Printf("distributor: Turn %d complete\n", turn)
 
 		select {
-		// ticker.C is a channel that receives ticks every 2 seconds
+		//ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
+			//fmt.Println("distributor: Tick received, calculating alive cells")
 			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
 		case key := <-c.keyPresses:
+			//fmt.Printf("distributor: Key press detected: %c\n", key)
 			switch key {
 			case 's':
+				//fmt.Println("distributor: Saving image state")
 				c.events <- StateChange{c.completedTurns, Executing}
 				outputImage(c, p, world)
 			case 'q':
+				//fmt.Println("distributor: Quit command received, preparing to exit")
 				outputImage(c, p, world)
 				// c.ioCommand <- ioCheckIdle
 				// <-c.ioIdle
 				c.shared.commandLock.Lock()
 				c.shared.command = ioCheckIdle
+				c.shared.commandReady = true
 				c.shared.commandCond.Signal()
 				c.shared.commandLock.Unlock()
 
@@ -195,6 +205,7 @@ func distributor(p Params, c distributorChannels) {
 				close(c.events)
 				return
 			case 'p':
+				//fmt.Println("distributor: Pausing simulation")
 				c.events <- StateChange{turn, Paused}
 				//mu.Lock()
 				pause := true
@@ -202,20 +213,25 @@ func distributor(p Params, c distributorChannels) {
 
 				for pause {
 					key := <-c.keyPresses
+					//fmt.Printf("distributor: Key press during pause: %c\n", key)
 					switch key {
 					case 'p':
+						//fmt.Println("distributor: Resuming simulation from pause")
 						c.events <- StateChange{turn, Executing}
 						mu.Lock()
 						pause = false
 						mu.Unlock()
 					case 's':
+						//fmt.Println("distributor: Saving image state during pause")
 						outputImage(c, p, world)
 					case 'q':
+						//fmt.Println("distributor: Quit command received during pause, preparing to exit")
 						outputImage(c, p, world)
 						// c.ioCommand <- ioCheckIdle
 						// <-c.ioIdle
 						c.shared.commandLock.Lock()
 						c.shared.command = ioCheckIdle
+						c.shared.commandReady = true
 						c.shared.commandCond.Signal()
 						c.shared.commandLock.Unlock()
 
@@ -238,6 +254,7 @@ func distributor(p Params, c distributorChannels) {
 	}
 
 	outputImage(c, p, world)
+	//fmt.Println("distributor: All turns completed, saving final image")
 
 	// TODO: Report the final state using FinalTurnCompleteEvent.
 	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
@@ -246,6 +263,7 @@ func distributor(p Params, c distributorChannels) {
 	// <-c.ioIdle
 	c.shared.commandLock.Lock()
 	c.shared.command = ioCheckIdle
+	c.shared.commandReady = true
 	c.shared.commandCond.Signal()
 	c.shared.commandLock.Unlock()
 
@@ -259,5 +277,6 @@ func distributor(p Params, c distributorChannels) {
 	c.events <- StateChange{c.completedTurns, Quitting}
 
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
+	//fmt.Println("distributor: Exiting simulation and closing events channel")
 	close(c.events)
 }

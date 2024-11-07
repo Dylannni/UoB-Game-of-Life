@@ -1,7 +1,5 @@
 package gol
 
-import "fmt"
-
 // Params provides the details of how to run the Game of Life and which image to load.
 type Params struct {
 	Turns       int
@@ -23,14 +21,10 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	completedTurns := 0
 
 	shared := NewShareState()
-	fmt.Println("Run: Shared state initialized")
+	//fmt.Println("Run: Shared state initialized")
 
-	// 启动 IO 协程
-	go func() {
-		fmt.Println("Run: Starting startIo goroutine")
-		startIo(p, shared)
-		fmt.Println("Run: startIo goroutine ended")
-	}()
+	// start
+	go startIo(p, shared)
 
 	distributorChannels := distributorChannels{
 		events:         events,
