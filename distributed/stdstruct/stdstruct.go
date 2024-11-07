@@ -25,45 +25,20 @@ type RegisterResponse struct {
 }
 
 type GameRequest struct {
-	World [][]byte
-	Threads int
+	World 		[][]byte
+	Threads 	int
 }
 
 type GameResponse struct {
-	World [][]byte
+	World 			[][]byte
 }
 
-// type ServerAddress struct {
-// 	Address string
-// 	Port    string
-// }
-
-// type InitRequest struct {
-// 	StartX int
-// 	EndX   int
-// 	StartY int
-// 	EndY   int
-// 	World  [][]byte
-// 	// ExtendedSlice  [][]byte
-// 	Threads int
-// 	PreviousServer ServerAddress
-// 	NextServer     ServerAddress
-// }
-
-// type InitResponse struct {
-// }
-
 type InitRequest struct {
-	World  [][]byte
-	Height int
-	// StartX int
-	// EndX   int
-	// StartY int
-	// EndY   int
-	// // ExtendedSlice  [][]byte
-	Threads int
-	PreviousServer string
-	NextServer     string
+	World  			[][]byte
+	Height 			int
+	Threads 		int
+	PreviousServer 	string
+	NextServer     	string
 }
 
 type InitResponse struct {
@@ -74,10 +49,7 @@ type SliceRequest struct {
 	EndX   int
 	StartY int
 	EndY   int
-	Slice  			[][]byte
-	// ExtendedSlice  	[][]byte
-	// PreviousServer 	string
-	// NextServer		string
+	Slice  [][]byte
 }
 
 type SliceResponse struct {
