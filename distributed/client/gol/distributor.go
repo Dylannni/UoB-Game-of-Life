@@ -24,19 +24,15 @@ type distributorChannels struct {
 
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
-	// brokerAddr := flag.String("broker", "127.0.0.1:8030", "Address of broker instance")
-	// flag.Parse()
 
-	// client, err := rpc.Dial("tcp", *brokerAddr)
-	client, err := rpc.Dial("tcp", "127.0.0.1:8030")
-
+	client, err := rpc.Dial("tcp", "127.0.0.1:8030") // Address of broker instance
 	if err != nil {
-		fmt.Println("Error connecting to server:", err)
+		fmt.Println("Error connecting to broker:", err)
 		return
 	}
 	defer client.Close()
 
-	// TODO: Create a 2D slice to store the world.
+	// Create a 2D slice to store the world.
 	world := initWorld(p.ImageHeight, p.ImageWidth)
 	ticker := time.NewTicker(2 * time.Second)
 
@@ -56,7 +52,7 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	c.events <- StateChange{turn, Executing}
 
-	// TODO: Execute all turns of the Game of Life.
+	// Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
 
 		// prepare request for server
@@ -71,7 +67,6 @@ func distributor(p Params, c distributorChannels) {
 
 		world = gameRes.World
 		c.completedTurns = turn + 1
-
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		select {

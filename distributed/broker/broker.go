@@ -24,7 +24,6 @@ var NodesList = [...]ServerAddress{
 	{Address: "54.86.171.180", Port: "8032"},
 	{Address: "3.81.248.33", Port: "8033"},
 	{Address: "54.89.239.8", Port: "8034"},
-	// {Address: "54.156.70.166", Port: "8035"},
 }
 
 func (b *Broker) initializeNodes() {
@@ -70,13 +69,13 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
 
-		 // 提取当前切片
+		// slice of the world that needs to calculated
 		slice := req.World[startY:endY]
 
-		// 声明并初始化 extendedSlice
+		// extendedSlice is the slice with two (top, bottom) halo line
 		var extendedSlice [][]byte
 		if startY == 0 {
-			// adding the last row of the last slice to the top
+			// adding the last row of the world to the top
 			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
 		} else {
 			// adding the last row of the last slice to the top
@@ -84,10 +83,10 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		}
 
 		if endY == height {
-			// 最后一块切片，添加第一行作为 Ghost Cell
+			// adding the first line of the world to the bottom
 			extendedSlice = append(extendedSlice, req.World[0])
 		} else {
-			// adding the first row of next slice to the bottom
+			// adding the first line of next slice to the bottom
 			extendedSlice = append(extendedSlice, req.World[endY])
 		}
 
@@ -100,12 +99,12 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			ExtendedSlice:  extendedSlice,
 		}
 		var sliceRes stdstruct.SliceResponse
+
 		err := client.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 		if err != nil {
 			fmt.Println("Error processing slice:", err)
 			errors[i] = err
 		}
-		fmt.Printf("Worker %d processed rows %d to %d\n", i, startY, endY)
 
 		results[i] = sliceRes.Slice
 	}
