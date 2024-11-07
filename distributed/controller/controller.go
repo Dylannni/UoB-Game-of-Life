@@ -186,7 +186,6 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
-	init nextWorld (slice needs to process)
 	nextWorld := make([][]byte, height)
 	for i := range nextWorld {
 		nextWorld[i] = make([]byte, width)
