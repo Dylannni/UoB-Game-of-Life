@@ -219,7 +219,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		for i := 0; i < s.threads-1; i++ {
 			go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
 		}
-		go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
+		go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-2]) 
 	
 		// mergeWorld := make([][]byte, 0, height)
 		
@@ -228,7 +228,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 			mergeWorld = append(mergeWorld, pieces...)
 		}
 	}
-	
+
 	res.Slice = mergeWorld
 	return nil
 }
