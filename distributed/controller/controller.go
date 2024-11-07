@@ -195,9 +195,9 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	heightPerThread := p.ImageHeight / p.Threads
 
 	for i := 0; i < p.Threads-1; i++ {
-		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX int, extendworld, nextWorld ,tempWorld[i]) 
+		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld ,tempWorld[i]) 
 	}
-	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX int, extendworld, nextWorld ,tempWorld[s.threads-1]) 
+	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld ,tempWorld[s.threads-1]) 
 
 	mergeWorld := make([][]byte, height)
 	for i := range mergeWorld {
