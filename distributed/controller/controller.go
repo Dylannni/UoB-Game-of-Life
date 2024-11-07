@@ -192,17 +192,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		copy(nextWorld[i], req.Slice[i])
 	}
 
-	// tempWorld := make([]chan [][]byte, s.threads)
-	// for i := range tempWorld {
-	// 	tempWorld[i] = make(chan [][]byte)
-	// }
-
 	mergeWorld := make([][]byte, 0, height)
-	// pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
-	// mergeWorld = append(mergeWorld, pieces...)
-
-	// res.Slice = mergeWorld
-
 
 	tempWorld := make([]chan [][]byte, s.threads)
 	for i := range tempWorld {
@@ -225,36 +215,6 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		pieces := <-tempWorld[i]
 		mergeWorld = append(mergeWorld, pieces...)
 	}
-
-	// if height < 16 { 
-	// 	// if image size is less than 16, don't do parallel (OVERKILL)
-	// 	pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
-	// 	mergeWorld = append(mergeWorld, pieces...)
-
-	// } else { // image size bigger than 16x16
-	// 	tempWorld := make([]chan [][]byte, s.threads)
-	// 	for i := range tempWorld {
-	// 		tempWorld[i] = make(chan [][]byte)
-	// 	}
-
-	// 	heightPerThread := (height + s.threads - 1) / s.threads 
-
-	// 	for i := 0; i < s.threads-1; i++ {
-	// 		start := i * heightPerThread
-	// 		end := start + heightPerThread
-	// 		if end > height {
-	// 			end = height
-	// 		}
-	// 		go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
-	// 	}
-	// 	go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
-		
-	// 	for i := 0; i < s.threads; i++ {
-	// 		pieces := <-tempWorld[i]
-	// 		mergeWorld = append(mergeWorld, pieces...)
-	// 	}
-	// }
-
 	res.Slice = mergeWorld
 	return nil
 }
