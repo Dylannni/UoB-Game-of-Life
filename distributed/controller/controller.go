@@ -17,7 +17,7 @@ type GameOfLife struct{
 	lastLineSent   	chan bool
 	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
 	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
-	s.tempWorld		[]chan [][]byte
+	tempWorld		[]chan [][]byte
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
