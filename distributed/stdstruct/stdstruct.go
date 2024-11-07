@@ -1,5 +1,7 @@
 package stdstruct
 
+import	"uk.ac.bris.cs/gameoflife/client/util"
+
 type Cell struct {
 	X, Y int
 }
@@ -31,6 +33,7 @@ type GameRequest struct {
 
 type GameResponse struct {
 	World [][]byte
+	FlippedCells []util.Cell
 }
 
 // type ServerAddress struct {
