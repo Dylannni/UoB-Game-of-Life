@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 	"net"
 	"net/rpc"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
