@@ -197,46 +197,34 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	// 	tempWorld[i] = make(chan [][]byte)
 	// }
 
-	// mergeWorld := make([][]byte, height)
-	// for i := range mergeWorld {
-	// 	mergeWorld[i] = make([]byte, width)
-	// }
+	// mergeWorld := make([][]byte, 0, height)
+	// pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
+	// mergeWorld = append(mergeWorld, pieces...)
 
-	mergeWorld := make([][]byte, 0, height)
-	pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
-	mergeWorld = append(mergeWorld, pieces...)
-
-	res.Slice = mergeWorld
+	// res.Slice = mergeWorld
 
 
 	// tempWorld := make([]chan [][]byte, s.threads)
 	// for i := range tempWorld {
 	// 	tempWorld[i] = make(chan [][]byte)
 	// }
-	// fmt.Println("TEMP WORLD CREATED")
 
-	// heightPerThread := height / s.threads
 
-	// for i := 0; i < s.threads-1; i++ {
-	// 	go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, req.Slice ,tempWorld[i]) 
-	// }
-	// go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, req.Slice ,tempWorld[s.threads-1]) 
+	heightPerThread := height / s.threads
 
-	// mergeWorld := make([][]byte, height)
-	// for i := range mergeWorld {
-	// 	mergeWorld[i] = make([]byte, width)
-	// }
+	for i := 0; i < s.threads-1; i++ {
+		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld ,tempWorld[i]) 
+	}
+	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld ,tempWorld[s.threads-1]) 
 
-	// mergeWorld := make([][]byte, 0, height)
+	mergeWorld := make([][]byte, 0, height)
 	
-	// fmt.Println("MERGE WORLD CREATED")
+	for i := 0; i < s.threads; i++ {
+		pieces := <-tempWorld[i]
+		mergeWorld = append(mergeWorld, pieces...)
+	}
 
-	// for i := 0; i < s.threads; i++ {
-	// 	pieces := <-tempWorld[i]
-	// 	mergeWorld = append(mergeWorld, pieces...)
-	// }
-
-	// res.Slice = mergeWorld
+	res.Slice = mergeWorld
 	return nil
 }
 
