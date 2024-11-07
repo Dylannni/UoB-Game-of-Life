@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/rpc"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
+	"uk.ac.bris.cs/gameoflife/client/util"
 )
 
 type GameOfLife struct{
