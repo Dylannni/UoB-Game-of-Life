@@ -122,9 +122,15 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, nextWorld [][]byte) [][]byte {
+func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Slice [][]byte) [][]byte {
 	height := endY - startY
 	width := endX - startX
+
+	nextWorld := make([][]byte, height)
+	for i := range nextWorld {
+		nextWorld[i] = make([]byte, width)
+		copy(nextWorld[i], Slice[i])
+	}
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -181,13 +187,13 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
 	// init nextWorld (slice needs to process)
-	nextWorld := make([][]byte, height)
-	for i := range nextWorld {
-		nextWorld[i] = make([]byte, width)
-		copy(nextWorld[i], req.Slice[i])
-	}
+	// nextWorld := make([][]byte, height)
+	// for i := range nextWorld {
+	// 	nextWorld[i] = make([]byte, width)
+	// 	copy(nextWorld[i], req.Slice[i])
+	// }
 
-	fmt.Println("Next WORLD CREATED")
+	// fmt.Println("Next WORLD CREATED")
 	
 
 	tempWorld := make([]chan [][]byte, s.threads)
@@ -199,9 +205,9 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	heightPerThread := height / s.threads
 
 	for i := 0; i < s.threads-1; i++ {
-		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld ,tempWorld[i]) 
+		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, req.Slice ,tempWorld[i]) 
 	}
-	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld ,tempWorld[s.threads-1]) 
+	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, req.Slice ,tempWorld[s.threads-1]) 
 
 	// mergeWorld := make([][]byte, height)
 	// for i := range mergeWorld {
