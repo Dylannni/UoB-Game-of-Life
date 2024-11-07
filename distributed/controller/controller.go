@@ -197,33 +197,33 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	// 	tempWorld[i] = make(chan [][]byte)
 	// }
 
-	// mergeWorld := make([][]byte, 0, height)
-	// pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
-	// mergeWorld = append(mergeWorld, pieces...)
-
-	// res.Slice = mergeWorld
-
-
-	tempWorld := make([]chan [][]byte, s.threads)
-	for i := range tempWorld {
-		tempWorld[i] = make(chan [][]byte)
-	}
-
-	heightPerThread := height / s.threads
-
-	for i := 0; i < s.threads-1; i++ {
-		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
-	}
-	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
-
 	mergeWorld := make([][]byte, 0, height)
-	
-	for i := 0; i < s.threads; i++ {
-		pieces := <-tempWorld[i]
-		mergeWorld = append(mergeWorld, pieces...)
-	}
+	pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
+	mergeWorld = append(mergeWorld, pieces...)
 
 	res.Slice = mergeWorld
+
+
+	// tempWorld := make([]chan [][]byte, s.threads)
+	// for i := range tempWorld {
+	// 	tempWorld[i] = make(chan [][]byte)
+	// }
+
+	// heightPerThread := height / s.threads
+
+	// for i := 0; i < s.threads-1; i++ {
+	// 	go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
+	// }
+	// go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
+
+	// mergeWorld := make([][]byte, 0, height)
+	
+	// for i := 0; i < s.threads; i++ {
+	// 	pieces := <-tempWorld[i]
+	// 	mergeWorld = append(mergeWorld, pieces...)
+	// }
+
+	// res.Slice = mergeWorld
 	return nil
 }
 
