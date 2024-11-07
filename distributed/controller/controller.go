@@ -214,12 +214,19 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 			tempWorld[i] = make(chan [][]byte)
 		}
 
-		heightPerThread := height / s.threads
+		// heightPerThread := height / s.threads
+
+		heightPerThread := (height + s.threads - 1) / s.threads 
 
 		for i := 0; i < s.threads-1; i++ {
-			go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
+			start := i * heightPerThread
+			end := start + heightPerThread
+			if end > height {
+				end = height
+			}
+			go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
 		}
-		go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
+		go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
 	
 		// mergeWorld := make([][]byte, 0, height)
 		
