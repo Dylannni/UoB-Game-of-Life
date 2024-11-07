@@ -129,7 +129,7 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, ne
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-			globalY := startY + y + 1 // because extendWorld have one extra halo line on the top
+			globalY := y + 1 // because extendWorld have one extra halo line on the top
 			globalX := x
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, len(extendWorld), len(extendWorld[0]))
