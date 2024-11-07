@@ -64,6 +64,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 	var outChannels []chan [][]byte
 
+	// same for loop, move this for loop to a seprate function
 	for i, server := range b.serverList {
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
@@ -74,8 +75,9 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			Height: endY - startY,
 			World: slice,
+			Height: endY - startY,
+			Threads: req.Threads,
 			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
 			}, &stdstruct.InitResponse{})
@@ -135,7 +137,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte) {
 	var sliceRes stdstruct.SliceResponse
-	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
+	err := server.Call("GameOfLife.NextTurn", sliceReq, &sliceRes)
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)

@@ -12,6 +12,7 @@ import (
 type GameOfLife struct{
 	world 			[][]byte
 	height 			int
+	threads 		int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
 	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
@@ -33,6 +34,7 @@ func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) 
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
 	s.height = req.Height
+	s.threads = req.Threads
 	return nil
 }
 
@@ -120,7 +122,43 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
+func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, nextWorld [][]byte) [][]byte {
+	height := endY - startY
+	width := endX - startX
+
+	// Iterate over each cell in the world
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			globalY := startY + y + 1 // because extendWorld have one extra halo line on the top
+			globalX := x
+			// Count the live neighbors
+			liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, len(extendWorld), len(extendWorld[0]))
+			// Apply the Game of Life rules
+			if extendWorld[globalY][globalX] == 255 {
+				// Cell is alive
+				if liveNeighbors < 2 || liveNeighbors > 3 {
+					nextWorld[y][x] = 0 // Cell dies
+				} else {
+					nextWorld[y][x] = 255 // Cell stays alive
+				}
+			} else {
+				// Cell is dead
+				if liveNeighbors == 3 {
+					nextWorld[y][x] = 255 // Cell becomes alive
+				} else {
+					nextWorld[y][x] = 0 // Cell stays dead
+				}
+			}
+		}
+	}
+}
+
+func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, tempWorld chan<- [][]byte) {
+	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
+	tempWorld <- worldPart
+}
+
+func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
@@ -139,42 +177,40 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
+	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
-	// init nextWorld
+	// init nextWorld (slice needs to process)
 	nextWorld := make([][]byte, height)
 	for i := range nextWorld {
 		nextWorld[i] = make([]byte, width)
 		copy(nextWorld[i], req.Slice[i])
 	}
+	
 
-	// Iterate over each cell in the world
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-
-			globalY := y + 1
-			globalX := x
-			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), len(currWorld[0]))
-			// Apply the Game of Life rules
-			if currWorld[globalY][globalX] == 255 {
-				// Cell is alive
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					nextWorld[y][x] = 0 // Cell dies
-				} else {
-					nextWorld[y][x] = 255 // Cell stays alive
-				}
-			} else {
-				// Cell is dead
-				if liveNeighbors == 3 {
-					nextWorld[y][x] = 255 // Cell becomes alive
-				} else {
-					nextWorld[y][x] = 0 // Cell stays dead
-				}
-			}
-		}
+	tempWorld := make([]chan [][]byte, p.Threads)
+	for i := range tempWorld {
+		tempWorld[i] = make(chan [][]byte)
 	}
-	res.Slice = nextWorld
+
+	heightPerThread := p.ImageHeight / p.Threads
+
+	for i := 0; i < p.Threads-1; i++ {
+		go worker(i*heightPerThread, (i+1)*heightPerThread, 0, req.EndX int, extendworld, nextWorld ,tempWorld[i]) 
+	}
+	go worker((s.threads-1)*heightPerThread, req.EndY, 0, req.EndX int, extendworld, nextWorld ,tempWorld[s.threads-1]) 
+
+	mergeWorld := make([][]byte, height)
+	for i := range mergeWorld {
+		mergeWorld[i] = make([]byte, width)
+	}
+
+	for i := 0; i < p.Threads; i++ {
+		pieces := <-tempWorld[i]
+		mergeWorld = append(mergeWorld, pieces...)
+	}
+
+
+	res.Slice = mergeWorld
 	return nil
 }
 

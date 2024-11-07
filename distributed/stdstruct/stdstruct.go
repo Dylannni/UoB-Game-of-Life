@@ -54,14 +54,14 @@ type GameResponse struct {
 // }
 
 type InitRequest struct {
+	World  [][]byte
 	Height int
 	// StartX int
 	// EndX   int
 	// StartY int
 	// EndY   int
-	World  [][]byte
 	// // ExtendedSlice  [][]byte
-	// Threads int
+	Threads int
 	PreviousServer string
 	NextServer     string
 }
