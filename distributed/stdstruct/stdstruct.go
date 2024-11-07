@@ -75,7 +75,7 @@ type SliceRequest struct {
 	StartY int
 	EndY   int
 	Slice  			[][]byte
-	ExtendedSlice  	[][]byte
+	// ExtendedSlice  	[][]byte
 	// PreviousServer 	string
 	// NextServer		string
 }

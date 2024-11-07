@@ -21,10 +21,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "44.211.202.200", Port: "8031"},
-	{Address: "3.83.11.239", Port: "8032"},
-	{Address: "3.89.206.35", Port: "8033"},
-	{Address: "23.23.24.46", Port: "8034"},
+	{Address: "54.205.70.218", Port: "8031"},
+	{Address: "18.233.151.76", Port: "8032"},
+	{Address: "34.207.107.37", Port: "8033"},
+	{Address: "54.162.44.9", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -91,22 +91,22 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		var extendedSlice [][]byte
-		if startY == 0 {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		} else {
-			// adding the last row of the last slice to the top
-			extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
-		}
+		// var extendedSlice [][]byte
+		// if startY == 0 {
+		// 	// adding the last row of the last slice to the top
+		// 	extendedSlice = append([][]byte{req.World[height-1]}, slice...)
+		// } else {
+		// 	// adding the last row of the last slice to the top
+		// 	extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
+		// }
 
-		if endY == height {
-			// 最后一块切片，添加第一行作为 Ghost Cell
-			extendedSlice = append(extendedSlice, req.World[0])
-		} else {
-			// adding the first row of next slice to the bottom
-			extendedSlice = append(extendedSlice, req.World[endY])
-		}
+		// if endY == height {
+		// 	// 最后一块切片，添加第一行作为 Ghost Cell
+		// 	extendedSlice = append(extendedSlice, req.World[0])
+		// } else {
+		// 	// adding the first row of next slice to the bottom
+		// 	extendedSlice = append(extendedSlice, req.World[endY])
+		// }
 
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
@@ -116,7 +116,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			Slice:  slice,
 			// PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
 			// NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
-			ExtendedSlice:  extendedSlice,
+			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		outChannels = append(outChannels, outChannel)
