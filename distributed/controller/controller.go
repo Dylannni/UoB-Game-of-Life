@@ -37,7 +37,7 @@ func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) 
 	s.height = req.Height
 	s.threads = req.Threads
 
-	s.tempWorld := make([]chan [][]byte, s.threads)
+	s.tempWorld = make([]chan [][]byte, s.threads)
 	for i := range s.tempWorld {
 		s.tempWorld[i] = make(chan [][]byte)
 	}
