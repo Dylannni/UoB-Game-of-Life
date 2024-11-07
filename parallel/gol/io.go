@@ -30,6 +30,8 @@ type shareState struct {
 	inputLock sync.Mutex
 	input     uint8
 	inputCond *sync.Cond
+
+	//outputBuffer [][]uint8
 }
 
 // ioState is the internal ioState of the io goroutine.
@@ -73,6 +75,7 @@ func (io *ioState) writePgmImage() {
 	io.shared.filenameLock.Lock()
 	defer io.shared.filenameLock.Unlock()
 	for io.shared.filename == "" {
+		fmt.Println("writePgmImage: Waiting for filename...")
 		io.shared.filenameCond.Wait()
 	}
 	filename := io.shared.filename
@@ -102,13 +105,15 @@ func (io *ioState) writePgmImage() {
 			//	fmt.Println(x, y)
 			//}
 			io.shared.outputLock.Lock()
-			defer io.shared.outputLock.Unlock()
 			for io.shared.output == 0 {
+				fmt.Println("writePgmImage: Waiting for output data...")
 				io.shared.outputCond.Wait() // wait for output update
 			}
 			val := io.shared.output
+			io.shared.output = 0
 			io.shared.outputCond.Signal() //signal other goroutine
-
+			fmt.Printf("writePgmImage: Received output data at (%d, %d): %d\n", x, y, val)
+			io.shared.outputLock.Unlock()
 			world[y][x] = val
 		}
 	}
@@ -134,6 +139,7 @@ func (io *ioState) readPgmImage() {
 	io.shared.filenameLock.Lock()
 	defer io.shared.filenameLock.Unlock()
 	for io.shared.filename == "" {
+		fmt.Println("readPgmImage: Waiting for filename...")
 		io.shared.filenameCond.Wait()
 	}
 	filename := io.shared.filename
@@ -167,9 +173,13 @@ func (io *ioState) readPgmImage() {
 	for _, b := range image {
 		//io.channels.input <- b
 		io.shared.inputLock.Lock()
-		defer io.shared.inputLock.Unlock()
 		io.shared.input = b
 		io.shared.inputCond.Signal()
+		fmt.Printf("readPgmImage: Sent input data: %d\n", b)
+		for io.shared.input != 0 {
+			io.shared.inputCond.Wait()
+		}
+		io.shared.inputLock.Unlock()
 	}
 
 	fmt.Println("File", filename, "input done!")
@@ -184,18 +194,26 @@ func startIo(p Params, shared *shareState) {
 
 	for {
 		io.shared.commandLock.Lock()
+		for io.shared.command == 0 {
+			fmt.Println("startIo: Waiting for command...")
+			io.shared.commandCond.Wait()
+		}
 		command := io.shared.command
+		fmt.Println("startIo: Received command:", command)
+		io.shared.command = 0
 		io.shared.commandLock.Unlock()
 		// Block and wait for requests from the distributor
 		switch command {
 		case ioInput:
 			io.readPgmImage()
+			fmt.Println("done")
 		case ioOutput:
 			io.writePgmImage()
 		case ioCheckIdle:
 			//io.channels.idle <- true
 			io.shared.idleLock.Lock()
 			io.shared.idle = true
+			fmt.Println("startIo: Idle state set to true")
 			io.shared.idleCond.Signal()
 			io.shared.idleLock.Unlock()
 		}

@@ -1,5 +1,7 @@
 package gol
 
+import "fmt"
+
 // Params provides the details of how to run the Game of Life and which image to load.
 type Params struct {
 	Turns       int
@@ -12,32 +14,29 @@ type Params struct {
 func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 
 	//	TODO: Put the missing channels in here.
-	ioCommand := make(chan ioCommand)
-	ioIdle := make(chan bool)
-	ioFilename := make(chan string)
-	ioOutput := make(chan uint8)
-	ioInput := make(chan uint8)
+	// ioCommand := make(chan ioCommand)
+	// ioIdle := make(chan bool)
+	// ioFilename := make(chan string)
+	// ioOutput := make(chan uint8)
+	// ioInput := make(chan uint8)
 
 	completedTurns := 0
 
-	ioChannels := ioChannels{
-		command:  ioCommand,
-		idle:     ioIdle,
-		filename: ioFilename,
-		output:   ioOutput,
-		input:    ioInput,
-	}
-	go startIo(p, ioChannels)
+	shared := NewShareState()
+	fmt.Println("Run: Shared state initialized")
+
+	// 启动 IO 协程
+	go func() {
+		fmt.Println("Run: Starting startIo goroutine")
+		startIo(p, shared)
+		fmt.Println("Run: startIo goroutine ended")
+	}()
 
 	distributorChannels := distributorChannels{
 		events:         events,
-		ioCommand:      ioCommand,
-		ioIdle:         ioIdle,
-		ioFilename:     ioFilename,
-		ioOutput:       ioOutput,
-		ioInput:        ioInput,
 		completedTurns: completedTurns,
 		keyPresses:     keyPresses,
+		shared:         shared,
 	}
 	distributor(p, distributorChannels)
 }
