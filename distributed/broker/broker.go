@@ -21,10 +21,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "54.205.70.218", Port: "8031"},
-	{Address: "18.233.151.76", Port: "8032"},
-	{Address: "34.207.107.37", Port: "8033"},
-	{Address: "54.162.44.9", Port: "8034"},
+	{Address: "52.91.168.65", Port: "8031"},
+	{Address: "34.227.20.32", Port: "8032"},
+	{Address: "34.207.173.200", Port: "8033"},
+	{Address: "23.20.33.9", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -63,6 +63,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	sliceHeight := height / numServers
 
 	var outChannels []chan [][]byte
+	var flippedCellsCh []chan []util.Cell // could use one single channel
 
 	for i, server := range b.serverList {
 		startY := i * sliceHeight
@@ -119,8 +120,10 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
+		flippedCellCh := make(chan []util.Cell)
 		outChannels = append(outChannels, outChannel)
-		go runAWSnode(server, sliceReq, outChannel)
+		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
+		go runAWSnode(server, sliceReq, outChannel, flippedCellCh)
 	}
 
 	// Merge results
@@ -129,11 +132,18 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		newWorld = append(newWorld, <-outChannels[i]...)
 	}
 
+	// Merge flipped cells
+	var cellFlipped []util.Cell
+	for i := 0; i < numServers; i++ {
+		cellFlipped = append(cellFlipped, <-flippedCellsCh[i]...)
+	}
+
 	res.World = newWorld
+	res.FlippedCells = cellFlipped
 	return nil
 }
 
-func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte) {
+func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
 	var sliceRes stdstruct.SliceResponse
 	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 
@@ -141,6 +151,7 @@ func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- 
 		fmt.Println("Error processing slice:", err)
 	}
 	out <- sliceRes.Slice
+	flippedCellCh <- sliceRes.FlippedCells
 }
 
 func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {

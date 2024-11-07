@@ -36,25 +36,6 @@ type GameResponse struct {
 	FlippedCells []util.Cell
 }
 
-// type ServerAddress struct {
-// 	Address string
-// 	Port    string
-// }
-
-// type InitRequest struct {
-// 	StartX int
-// 	EndX   int
-// 	StartY int
-// 	EndY   int
-// 	World  [][]byte
-// 	// ExtendedSlice  [][]byte
-// 	Threads int
-// 	PreviousServer ServerAddress
-// 	NextServer     ServerAddress
-// }
-
-// type InitResponse struct {
-// }
 
 type InitRequest struct {
 	Height int
@@ -78,13 +59,11 @@ type SliceRequest struct {
 	StartY int
 	EndY   int
 	Slice  			[][]byte
-	// ExtendedSlice  	[][]byte
-	// PreviousServer 	string
-	// NextServer		string
 }
 
 type SliceResponse struct {
 	Slice [][]byte
+	FlippedCells []util.Cell
 }
 
 type HaloRequest struct {

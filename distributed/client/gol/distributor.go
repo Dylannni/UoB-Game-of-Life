@@ -49,7 +49,6 @@ func distributor(p Params, c distributorChannels) {
 			world[y][x] = val
 			if val == 255 {
 				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
-				fmt.Println("CellFlipped!!!!!")
 			}
 		}
 	}

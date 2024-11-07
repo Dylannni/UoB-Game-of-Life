@@ -148,6 +148,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		copy(nextWorld[i], req.Slice[i])
 	}
 
+	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
@@ -161,6 +162,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					nextWorld[y][x] = 0 // Cell dies
+					flippedCells = append(flippedCells, util.Cell{X: globalX, Y: req.StartY + y})
 				} else {
 					nextWorld[y][x] = 255 // Cell stays alive
 				}
@@ -168,6 +170,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 				// Cell is dead
 				if liveNeighbors == 3 {
 					nextWorld[y][x] = 255 // Cell becomes alive
+					flippedCells = append(flippedCells, util.Cell{X: globalX, Y: req.StartY + y})
 				} else {
 					nextWorld[y][x] = 0 // Cell stays dead
 				}
@@ -175,6 +178,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		}
 	}
 	res.Slice = nextWorld
+	res.FlippedCells = flippedCells
 	return nil
 }
 
