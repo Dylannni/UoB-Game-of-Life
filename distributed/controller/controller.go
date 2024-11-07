@@ -7,44 +7,33 @@ import (
 	"sync"
 	"net"
 	"net/rpc"
-
-	"bytes"
-
-
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
 type GameOfLife struct{
 	world 			[][]byte
 	height 			int
-	// width			int
 	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
 	lastLineSent   	chan bool
 	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
 	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
-	mu 				sync.Mutex
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
-
 	s.previousServer, err = rpc.Dial("tcp", req.PreviousServer)
 	if err != nil {
 		return fmt.Errorf("failed to connect to previous server: %v", err)
 	}
-	fmt.Println("Connect to previous halo server ", req.PreviousServer)
 
 	s.nextServer, err = rpc.Dial("tcp", req.NextServer)
 	if err != nil {
 		return fmt.Errorf("failed to connect to next server: %v", err)
 	}
-	fmt.Println("Connect to next halo server ", req.NextServer)
-
 
 	s.world = req.World
 	s.firstLineSent = make(chan bool)
 	s.lastLineSent = make(chan bool)
 	s.height = req.Height
-	fmt.Println("INITED GameOfLife")
 	return nil
 }
 
@@ -132,66 +121,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-// func (s *GameOfLife) Init(req *stdstruct.InitRequest, _ *stdstruct.InitResponse) {
-// 	// init the AWS node, should move these to a seprate function
-// 	s.world = req.World
-// 	s.firstLineSent = make(chan bool)
-// 	s.lastLineSent = make(chan bool)
-// 	s.height = req.EndY - req.StartY
-// 	s.width = req.EndX - req.StartX
-// 	fmt.Println("Connect to halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-
-// 	// s.previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-// 	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-// 	// s.nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
-// 	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
-// }
-
-
-
-func compareWorlds(world1, world2 [][]byte) bool {
-    if len(world1) != len(world2) {
-        return false
-    }
-    for i := range world1 {
-        if !bytes.Equal(world1[i], world2[i]) {
-            return false
-        }
-    }
-    return true
-}
-
-
-
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
-
-	// previousServer, _= rpc.Dial("tcp", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	// fmt.Println("Connect to previous halo server ", req.PreviousServer.Address+":"+req.PreviousServer.Port)
-	// nextServer, _ = rpc.Dial("tcp", req.NextServer.Address+":"+req.NextServer.Port)
-	// fmt.Println("Connect to next halo server ", req.NextServer.Address+":"+req.NextServer.Port)
-
-	// var previousServer *rpc.Client
-	// var nextServer *rpc.Client
-
-
-	// // previousServer, _ = rpc.Dial("tcp", req.PreviousServer)
-	// previousServer, err = rpc.Dial("tcp", req.PreviousServer)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to connect to previous server: %v", err)
-	// }
-	// fmt.Println("Connect to previous halo server ", req.PreviousServer)
-	// // nextServer, _ = rpc.Dial("tcp", req.NextServer)
-	// // fmt.Println("Connect to next halo server ", req.NextServer)
-
-	// nextServer, err = rpc.Dial("tcp", req.NextServer)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to connect to next server: %v", err)
-	// }
-	// fmt.Println("Connect to next halo server ", req.PreviousServer)
-
-	// Two Channels used to recive Halo Area from getHalo()
-
-	extWorld := req.ExtendedSlice
 
 	preOut := make(chan []byte)
 	nextOut := make(chan []byte)
@@ -206,36 +136,13 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
 
-
-	// 比较 topHalo 和 extWorld 的第一行
-	// fmt.Println("Top Halo Line!!!!")
-	// fmt.Println(bytes.Equal(topHalo, extWorld[0]))
-
-	// 比较 bottomHalo 和 extWorld 的最后一行
-	// if len(extWorld) > 0 {
-	// 	lastIndex := len(extWorld) - 1
-	// 	fmt.Println("Bottom Halo Line!!!!")
-	// 	fmt.Println(bytes.Equal(bottomHalo, extWorld[lastIndex]))
-	// } else {
-	// 	fmt.Println("Error: extWorld is empty.")
-	// }
-
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	currWorld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
-	// currWorld := req.ExtendedSlice
 
-	// 比较整个世界（可选）
-	fmt.Println("Halo World Comparison:")
-	worldEqual := compareWorlds(currWorld, extWorld)
-	fmt.Println("currWorld is equal to extWorld:", worldEqual)
-
-	// world slice without halo area, will return to broker after calculation 
-	// nextWorld := req.Slice
-
-	// 初始化 nextWorld
+	// init nextWorld
 	nextWorld := make([][]byte, height)
 	for i := range nextWorld {
 		nextWorld[i] = make([]byte, width)
