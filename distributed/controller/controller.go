@@ -202,7 +202,8 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		mergeWorld[i] = make([]byte, width)
 	}
 
-	pieces = calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
+	// pieces := make([][]byte, 0, height)
+	pieces := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
 	mergeWorld = append(mergeWorld, pieces)
 
 	res.Slice = mergeWorld
