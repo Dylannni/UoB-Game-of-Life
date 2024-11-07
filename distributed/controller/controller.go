@@ -181,7 +181,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	bottomHalo := <-nextOut
 
 	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
+	// width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
