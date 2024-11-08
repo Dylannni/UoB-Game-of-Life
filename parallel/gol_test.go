@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"runtime/pprof"
 	"testing"
 
 	"uk.ac.bris.cs/gameoflife/gol"
@@ -17,15 +15,6 @@ func TestGol(t *testing.T) {
 		{ImageWidth: 64, ImageHeight: 64},
 		{ImageWidth: 512, ImageHeight: 512},
 	}
-
-	cpuProfile, err := os.Create("cpu.prof")
-	if err != nil {
-		t.Fatalf("could not create CPU profile: %v", err)
-	}
-	defer cpuProfile.Close()
-	pprof.StartCPUProfile(cpuProfile)
-	defer pprof.StopCPUProfile()
-
 	fmt.Println("TestGol started")
 	for _, p := range tests {
 		for _, turns := range []int{0, 1, 100} {
@@ -53,6 +42,4 @@ func TestGol(t *testing.T) {
 			}
 		}
 	}
-	fmt.Println("TestGol completed")
-
 }
