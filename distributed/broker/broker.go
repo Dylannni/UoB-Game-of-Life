@@ -7,13 +7,13 @@ import (
 	"net/rpc"
 	"os"
 
-	"uk.ac.bris.cs/gameoflife/stdstruct"
 	"uk.ac.bris.cs/gameoflife/client/util"
+	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
 type Broker struct {
-	serverList []*rpc.Client // List of controller addresses
-	connectedNodes int 		 // number of connected node
+	serverList     []*rpc.Client // List of controller addresses
+	connectedNodes int           // number of connected node
 }
 
 type ServerAddress struct {
@@ -22,10 +22,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "52.91.168.65", Port: "8031"},
-	{Address: "34.227.20.32", Port: "8032"},
-	{Address: "34.207.173.200", Port: "8033"},
-	{Address: "23.20.33.9", Port: "8034"},
+	{Address: "34.238.123.36", Port: "8031"},
+	{Address: "3.82.227.79", Port: "8032"},
+	{Address: "3.90.223.147", Port: "8033"},
+	{Address: "100.24.62.19", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -72,20 +72,19 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
-		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+		preNodeIndex := (i - 1 + b.connectedNodes) % b.connectedNodes
+		nextNodeIndex := (i + 1 + b.connectedNodes) % b.connectedNodes
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			Height: endY - startY,
-			World: slice,
-			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
-			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
-			}, &stdstruct.InitResponse{})
+			Height:         endY - startY,
+			World:          slice,
+			PreviousServer: NodesList[preNodeIndex].Address + ":" + NodesList[preNodeIndex].Port,
+			NextServer:     NodesList[nextNodeIndex].Address + ":" + NodesList[nextNodeIndex].Port,
+		}, &stdstruct.InitResponse{})
 		if err != nil {
 			fmt.Println("Error init GameOfLife:", err)
 		}
 	}
-
 
 	for i, server := range b.serverList {
 		startY := i * sliceHeight
@@ -93,32 +92,12 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		// var extendedSlice [][]byte
-		// if startY == 0 {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		// } else {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
-		// }
-
-		// if endY == height {
-		// 	// 最后一块切片，添加第一行作为 Ghost Cell
-		// 	extendedSlice = append(extendedSlice, req.World[0])
-		// } else {
-		// 	// adding the first row of next slice to the bottom
-		// 	extendedSlice = append(extendedSlice, req.World[endY])
-		// }
-
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
-			EndX: 	width,
+			EndX:   width,
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
-			// PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
-			// NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
-			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
 		flippedCellCh := make(chan []util.Cell)

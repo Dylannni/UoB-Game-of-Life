@@ -3,20 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"net"
 	"net/rpc"
-	"uk.ac.bris.cs/gameoflife/stdstruct"
+	"os"
+
 	"uk.ac.bris.cs/gameoflife/client/util"
+	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
-type GameOfLife struct{
-	world 			[][]byte
-	height 			int
-	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
-	lastLineSent   	chan bool
-	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+type GameOfLife struct {
+	world          [][]byte
+	height         int
+	firstLineSent  chan bool // 检测是否已经发送上下光环的通道
+	lastLineSent   chan bool
+	previousServer *rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     *rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
@@ -130,8 +131,8 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	go getHalo(s.nextServer, true, nextOut)
 
 	// Wait for neigbour node to send the getHalo() request
-	<- s.firstLineSent
-	<- s.lastLineSent
+	<-s.firstLineSent
+	<-s.lastLineSent
 
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
