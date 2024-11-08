@@ -2,10 +2,6 @@ package stdstruct
 
 import	"uk.ac.bris.cs/gameoflife/client/util"
 
-type Cell struct {
-	X, Y int
-}
-
 type Params struct {
 	Turns       int
 	Threads     int
@@ -39,13 +35,7 @@ type GameResponse struct {
 
 type InitRequest struct {
 	Height int
-	// StartX int
-	// EndX   int
-	// StartY int
-	// EndY   int
 	World  [][]byte
-	// // ExtendedSlice  [][]byte
-	// Threads int
 	PreviousServer string
 	NextServer     string
 }
