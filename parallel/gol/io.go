@@ -10,11 +10,11 @@ import (
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
-type shareState struct {
+type shareIOState struct {
 	commandLock  sync.Mutex // control access to shared variables
-	command      ioCommand
+	command      ioCommand  // stores the current command from the distributor
 	commandCond  *sync.Cond // condition variable -allows goroutine to wait for a specific condition (such as data being ready) to hold.
-	commandReady bool
+	commandReady bool       // flag indicating if a command is ready
 
 	idleLock sync.Mutex
 	idle     bool
@@ -41,11 +41,11 @@ type shareState struct {
 // ioState is the internal ioState of the io goroutine.
 type ioState struct {
 	params Params
-	shared *shareState
+	shared *shareIOState
 }
 
-func NewShareState() *shareState {
-	ioState := &shareState{}
+func NewShareState() *shareIOState {
+	ioState := &shareIOState{}
 	ioState.commandCond = sync.NewCond(&ioState.commandLock)
 	ioState.idleCond = sync.NewCond(&ioState.idleLock)
 	ioState.filenameCond = sync.NewCond(&ioState.filenameLock)
@@ -195,7 +195,7 @@ func (io *ioState) readPgmImage() {
 }
 
 // startIo should be the entrypoint of the io goroutine.
-func startIo(p Params, shared *shareState) {
+func startIo(p Params, shared *shareIOState) {
 	io := ioState{
 		params: p,
 		shared: shared,

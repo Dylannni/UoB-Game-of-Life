@@ -14,7 +14,7 @@ type distributorChannels struct {
 	events         chan<- Event
 	keyPresses     <-chan rune
 	completedTurns int
-	shared         *shareState // Implements shared state between distributor and io goroutine
+	shared         *shareIOState // Implements shared state between distributor and io goroutine
 }
 
 var mu sync.Mutex
