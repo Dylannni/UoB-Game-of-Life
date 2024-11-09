@@ -125,7 +125,8 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		flippedCellCh := make(chan []util.Cell)
 		outChannels = append(outChannels, outChannel)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-		go runAWSnode(server, sliceReq, outChannel)
+		// go runAWSnode(server, sliceReq, outChannel)
+		go runAWSnode(server, sliceReq, outChannel, flippedCellCh)
 	}
 
 	// Merge results
@@ -145,15 +146,26 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	return nil
 }
 
-func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte) {
+func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
 	var sliceRes stdstruct.SliceResponse
-	err := server.Call("GameOfLife.NextTurn", sliceReq, &sliceRes)
+	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)
 	}
 	out <- sliceRes.Slice
+	flippedCellCh <- sliceRes.FlippedCells
 }
+
+// func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte) {
+// 	var sliceRes stdstruct.SliceResponse
+// 	err := server.Call("GameOfLife.NextTurn", sliceReq, &sliceRes)
+
+// 	if err != nil {
+// 		fmt.Println("Error processing slice:", err)
+// 	}
+// 	out <- sliceRes.Slice
+// }
 
 func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {
 	fmt.Println("Shutting down the broker")
