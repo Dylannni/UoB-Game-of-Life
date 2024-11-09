@@ -48,35 +48,24 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 	return newWorld
 }
 
-// GetFirstLine 允许其他服务器调用，调用时会返回自己世界第一行的数据，完成后向通道传递信息
 func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
-	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
-	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
-	copy(haloLine, s.world[0])
+	haloLine := make([]byte, len(s.world[0])) // create a list that have same length as first line of the world
 
-	// for i, val := range s.world[0] {
-	// 	haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
-	// }
+	copy(haloLine, s.world[0])
 	res.HaloLine = haloLine
-	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
+	s.firstLineSent <- true 
 	return
 }
 
-// GetLastLine 返回自己世界最后一行的数据，和 GetFirstLine 逻辑相同
 func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	height := len(s.world)
 	haloLine := make([]byte, len(s.world[height-1]))
 	copy(haloLine, s.world[height-1])
-
-	// for i, val := range s.world[height-1] {
-	// 	haloLine[i] = val
-	// }
 	res.HaloLine = haloLine
 	s.lastLineSent <- true
 	return
 }
 
-// getHalo 是获取光环的函数，输入服务器地址和要获取的光环类型，然后调用指定服务器的方法，向通道传输返回值
 func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
 	res := stdstruct.HaloResponse{}
 	var err error
@@ -158,11 +147,6 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 	return flippedCells
 }
 
-// func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, tempWorld chan<- [][]byte) {
-// 	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
-// 	tempWorld <- worldPart
-// }
-
 func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
 	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
 	flippedCellsCh <- worldPart
@@ -189,12 +173,6 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
-	// nextWorld := make([][]byte, height)
-	// for i := range nextWorld {
-	// 	nextWorld[i] = make([]byte, width)
-	// 	copy(nextWorld[i], req.Slice[i])
-	// }
-
 	heightPerThread := (height + s.threads - 1) / s.threads
 
 	flippedCellsCh := make([]chan []util.Cell, s.threads)
@@ -208,9 +186,7 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		if end > height {
 			end = height
 		}
-		// go worker(start, end, 0, req.EndX, extendworld, nextWorld, flippedCellsCh[i])
 		go worker(start, end, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
-
 	}
 
 	var flippedCells []util.Cell

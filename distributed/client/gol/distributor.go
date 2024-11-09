@@ -31,7 +31,7 @@ func distributor(p Params, c distributorChannels) {
 	client, err := rpc.Dial("tcp", "127.0.0.1:8030")
 
 	if err != nil {
-		fmt.Println("Error connecting to server:", err)
+		fmt.Println("Error connecting to broker:", err)
 		return
 	}
 	defer client.Close()
@@ -71,6 +71,10 @@ func distributor(p Params, c distributorChannels) {
 
 		world = gameRes.World
 		c.completedTurns = turn + 1
+
+		for _, flippedCell := range gameRes.FlippedCells {
+			c.events <- CellFlipped{turn, flippedCell}
+		}
 
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 

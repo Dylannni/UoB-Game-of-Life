@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"os"
 
+	"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
@@ -63,6 +64,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	sliceHeight := height / numServers
 
 	var outChannels []chan [][]byte
+	var flippedCellsCh []chan []util.Cell // could use one single channel
 
 	// same for loop, move this for loop to a seprate function
 	for i, server := range b.serverList {
@@ -120,7 +122,9 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			// ExtendedSlice:  extendedSlice,
 		}
 		outChannel := make(chan [][]byte)
+		flippedCellCh := make(chan []util.Cell)
 		outChannels = append(outChannels, outChannel)
+		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 		go runAWSnode(server, sliceReq, outChannel)
 	}
 
@@ -130,7 +134,14 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		newWorld = append(newWorld, <-outChannels[i]...)
 	}
 
+	// Merge flipped cells
+	var cellFlipped []util.Cell
+	for i := 0; i < numServers; i++ {
+		cellFlipped = append(cellFlipped, <-flippedCellsCh[i]...)
+	}
+
 	res.World = newWorld
+	res.FlippedCells = cellFlipped
 	return nil
 }
 
