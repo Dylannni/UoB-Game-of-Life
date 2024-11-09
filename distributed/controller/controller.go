@@ -162,12 +162,18 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	bottomHalo := <-nextOut
 
 	height := req.EndY - req.StartY
-	// width := req.EndX - req.StartX
+	width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
-	heightPerThread := (height + s.threads - 1) / s.threads
+	nextWorld := make([][]byte, height)
+	for i := range nextWorld {
+		nextWorld[i] = make([]byte, width)
+		copy(nextWorld[i], req.Slice[i])
+	}
+
+	heightPerThread := (height + s.threads - 1) / s.threads // For ceiling division
 
 	flippedCellsCh := make([]chan []util.Cell, s.threads)
 	for i := range flippedCellsCh {
@@ -175,12 +181,12 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	}
 
 	for i := 0; i < s.threads; i++ {
-		start := i * heightPerThread
-		end := start + heightPerThread
-		if end > height {
-			end = height
+		startY := i * heightPerThread
+		endY := startY + heightPerThread
+		if endY > height {
+			endY = height
 		}
-		go worker(start, end, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
+		go worker(startY, endY, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
 	}
 
 	var flippedCells []util.Cell
@@ -191,14 +197,14 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	res.FlippedCells = flippedCells
 
 	for _, flippedCell := range flippedCells {
-		if s.world[flippedCell.Y][flippedCell.X] == 255 {
-			s.world[flippedCell.Y][flippedCell.X] = 0
+		if nextWorld[flippedCell.Y][flippedCell.X] == 255 {
+			nextWorld[flippedCell.Y][flippedCell.X] = 0
 		} else {
-			s.world[flippedCell.Y][flippedCell.X] = 255
+			nextWorld[flippedCell.Y][flippedCell.X] = 255
 		}
 	}
 
-	res.Slice = s.world
+	res.Slice = nextWorld
 	return nil
 }
 
