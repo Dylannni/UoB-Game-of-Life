@@ -19,18 +19,32 @@ func Run(p Params, events chan<- Event, keyPresses <-chan rune) {
 	// ioInput := make(chan uint8)
 
 	completedTurns := 0
-
 	shared := NewShareState()
 	//fmt.Println("Run: Shared state initialized")
 
 	// start
 	go startIo(p, shared)
 
+	sdl := NewSDLState()
+
 	distributorChannels := distributorChannels{
 		events:         events,
 		completedTurns: completedTurns,
 		keyPresses:     keyPresses,
 		shared:         shared,
+		sdl:            sdl,
 	}
+	go func() {
+		for {
+			outsideEvent := sdl.GetEvent()
+
+			events <- outsideEvent
+			if _, ok := outsideEvent.(FinalTurnComplete); ok {
+				close(events)
+				return
+			}
+		}
+	}()
+
 	distributor(p, distributorChannels)
 }

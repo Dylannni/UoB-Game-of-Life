@@ -44,6 +44,7 @@ type ioState struct {
 	shared *shareIOState
 }
 
+// initializes and returns a new instance of shareState with its condition variables.
 func NewShareState() *shareIOState {
 	ioState := &shareIOState{}
 	ioState.commandCond = sync.NewCond(&ioState.commandLock)
@@ -104,6 +105,7 @@ func (io *ioState) writePgmImage() {
 		world[i] = make([]byte, io.params.ImageWidth)
 	}
 
+	// Write pixel data for each position in the world.
 	for y := 0; y < io.params.ImageHeight; y++ {
 		for x := 0; x < io.params.ImageWidth; x++ {
 			//val := <-io.channels.output

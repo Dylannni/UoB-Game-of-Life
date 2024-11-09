@@ -82,7 +82,7 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
 					newWorld[y][x] = 0 // Cell dies
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
+					c.sdl.AddEvent(CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}})
 				} else {
 					newWorld[y][x] = 255 // Cell stays alive
 				}
@@ -90,7 +90,7 @@ func calculateNextState(startY, endY, startX, endX int, p Params, world [][]byte
 				// Cell is dead
 				if liveNeighbors == 3 {
 					newWorld[y][x] = 255 // Cell becomes alive
-					c.events <- CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}}
+					c.sdl.AddEvent(CellFlipped{CompletedTurns: c.completedTurns, Cell: util.Cell{X: globalX, Y: globalY}})
 				} else {
 					newWorld[y][x] = 0 // Cell stays dead
 				}

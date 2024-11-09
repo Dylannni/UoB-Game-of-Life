@@ -10,13 +10,67 @@ import (
 	"uk.ac.bris.cs/gameoflife/util"
 )
 
+type sdlState struct {
+	eventsLock     sync.Mutex
+	internalEvents []Event
+	eventsCond     *sync.Cond
+
+	internalKeyPress rune
+	keyPressLock     sync.Mutex
+	keyPressCond     *sync.Cond
+}
+
+// distributorChannels struct holds shared state and channels used by the distributor.
 type distributorChannels struct {
 	events         chan<- Event
 	keyPresses     <-chan rune
+	sdl            *sdlState
 	completedTurns int
 	shared         *shareIOState // Implements shared state between distributor and io goroutine
 }
 
+func NewSDLState() *sdlState {
+	sdlstate := &sdlState{
+		internalEvents: make([]Event, 0),
+	}
+	sdlstate.eventsCond = sync.NewCond(&sdlstate.eventsLock)
+	sdlstate.keyPressCond = sync.NewCond(&sdlstate.keyPressLock)
+	return sdlstate
+}
+
+func (s *sdlState) AddEvent(event Event) {
+	s.eventsLock.Lock()
+	defer s.eventsLock.Unlock()
+	s.internalEvents = append(s.internalEvents, event)
+	s.eventsCond.Signal()
+}
+
+func (s *sdlState) GetEvent() Event {
+	s.eventsLock.Lock()
+	defer s.eventsLock.Unlock()
+	for len(s.internalEvents) == 0 {
+		s.eventsCond.Wait()
+	}
+	event := s.internalEvents[0]
+	s.internalEvents = s.internalEvents[1:]
+	return event
+}
+
+func (s *sdlState) SetKeyPress(key rune) {
+	s.keyPressLock.Lock()
+	s.internalKeyPress = key
+	s.keyPressCond.Signal()
+	s.keyPressLock.Unlock()
+}
+
+func (s *sdlState) WaitForKeyPress() rune {
+	s.keyPressLock.Lock()
+	defer s.keyPressLock.Unlock()
+	s.keyPressCond.Wait()
+	return s.internalKeyPress
+}
+
+// Mutex for synchronizing worker functions
 var mu sync.Mutex
 
 // tempWorld store each workers result
@@ -76,7 +130,7 @@ func outputImage(c distributorChannels, p Params, world [][]byte) {
 	}
 	c.shared.idle = false
 	c.shared.idleLock.Unlock()
-	c.events <- ImageOutputComplete{c.completedTurns, c.shared.filename}
+	c.sdl.AddEvent(ImageOutputComplete{c.completedTurns, c.shared.filename})
 
 }
 
@@ -122,14 +176,14 @@ func distributor(p Params, c distributorChannels) {
 
 			//fmt.Println("recieve alive cells")
 			if world[y][x] == 255 {
-				c.events <- CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}}
+				c.sdl.AddEvent(CellFlipped{CompletedTurns: 0, Cell: util.Cell{X: x, Y: y}})
 
 			}
 		}
 	}
 
 	turn := 0
-	c.events <- StateChange{turn, Executing}
+	c.sdl.AddEvent(StateChange{turn, Executing})
 	//fmt.Println("distributor: Starting main simulation loop")
 
 	// TODO: Execute all turns of the Game of Life.
@@ -168,20 +222,20 @@ func distributor(p Params, c distributorChannels) {
 			world = mergeWorld
 		}
 
-		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
+		c.sdl.AddEvent(TurnComplete{CompletedTurns: c.completedTurns})
 		//fmt.Printf("distributor: Turn %d complete\n", turn)
 
 		select {
 		//ticker.C is a channel that receives ticks every 2 seconds
 		case <-ticker.C:
 			//fmt.Println("distributor: Tick received, calculating alive cells")
-			c.events <- AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))}
+			c.sdl.AddEvent(AliveCellsCount{c.completedTurns, len(calculateAliveCells(p, world))})
 		case key := <-c.keyPresses:
 			//fmt.Printf("distributor: Key press detected: %c\n", key)
 			switch key {
 			case 's':
 				//fmt.Println("distributor: Saving image state")
-				c.events <- StateChange{c.completedTurns, Executing}
+				c.sdl.AddEvent(StateChange{c.completedTurns, Executing})
 				outputImage(c, p, world)
 			case 'q':
 				//fmt.Println("distributor: Quit command received, preparing to exit")
@@ -200,16 +254,15 @@ func distributor(p Params, c distributorChannels) {
 				}
 				c.shared.idle = false
 				c.shared.idleLock.Unlock()
-				c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
-				c.events <- StateChange{turn, Quitting}
-				close(c.events)
+				c.sdl.AddEvent(StateChange{turn, Quitting})
+				c.sdl.AddEvent(FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)})
 				return
 			case 'p':
 				//fmt.Println("distributor: Pausing simulation")
-				c.events <- StateChange{turn, Paused}
-				//mu.Lock()
+				c.sdl.AddEvent(StateChange{turn, Paused})
+				mu.Lock()
 				pause := true
-				//mu.Unlock()
+				mu.Unlock()
 
 				for pause {
 					key := <-c.keyPresses
@@ -217,7 +270,7 @@ func distributor(p Params, c distributorChannels) {
 					switch key {
 					case 'p':
 						//fmt.Println("distributor: Resuming simulation from pause")
-						c.events <- StateChange{turn, Executing}
+						c.sdl.AddEvent(StateChange{turn, Executing})
 						mu.Lock()
 						pause = false
 						mu.Unlock()
@@ -241,9 +294,8 @@ func distributor(p Params, c distributorChannels) {
 						}
 						c.shared.idle = false
 						c.shared.idleLock.Unlock()
-						c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
-						c.events <- StateChange{turn, Quitting}
-						close(c.events)
+						c.sdl.AddEvent(StateChange{turn, Quitting})
+						c.sdl.AddEvent(FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)})
 						return
 					}
 				}
@@ -257,7 +309,6 @@ func distributor(p Params, c distributorChannels) {
 	//fmt.Println("distributor: All turns completed, saving final image")
 
 	// TODO: Report the final state using FinalTurnCompleteEvent.
-	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	// c.ioCommand <- ioCheckIdle
 	// <-c.ioIdle
@@ -274,9 +325,10 @@ func distributor(p Params, c distributorChannels) {
 	c.shared.idle = false
 	c.shared.idleLock.Unlock()
 
-	c.events <- StateChange{c.completedTurns, Quitting}
+	c.sdl.AddEvent(StateChange{c.completedTurns, Quitting})
+	c.sdl.AddEvent(FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)})
 
 	// Close the channel to stop the SDL goroutine gracefully. Removing may cause deadlock.
 	//fmt.Println("distributor: Exiting simulation and closing events channel")
-	close(c.events)
+	//close(c.events)
 }
