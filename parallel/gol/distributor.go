@@ -260,9 +260,9 @@ func distributor(p Params, c distributorChannels) {
 			case 'p':
 				//fmt.Println("distributor: Pausing simulation")
 				c.sdl.AddEvent(StateChange{turn, Paused})
-				mu.Lock()
+				//mu.Lock()
 				pause := true
-				mu.Unlock()
+				//mu.Unlock()
 
 				for pause {
 					key := <-c.keyPresses
@@ -271,9 +271,9 @@ func distributor(p Params, c distributorChannels) {
 					case 'p':
 						//fmt.Println("distributor: Resuming simulation from pause")
 						c.sdl.AddEvent(StateChange{turn, Executing})
-						mu.Lock()
+						//mu.Lock()
 						pause = false
-						mu.Unlock()
+						//mu.Unlock()
 					case 's':
 						//fmt.Println("distributor: Saving image state during pause")
 						outputImage(c, p, world)
