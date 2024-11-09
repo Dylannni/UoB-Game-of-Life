@@ -1,8 +1,7 @@
 package stdstruct
 
-type Cell struct {
-	X, Y int
-}
+import "uk.ac.bris.cs/gameoflife/client/util"
+
 
 type Params struct {
 	Turns       int
@@ -25,20 +24,21 @@ type RegisterResponse struct {
 }
 
 type GameRequest struct {
-	World 		[][]byte
-	Threads 	int
+	World   [][]byte
+	Threads int
 }
 
 type GameResponse struct {
-	World 			[][]byte
+	World        [][]byte
+	FlippedCells []util.Cell
 }
 
 type InitRequest struct {
-	World  			[][]byte
-	Height 			int
-	Threads 		int
-	PreviousServer 	string
-	NextServer     	string
+	World          [][]byte
+	Height         int
+	Threads        int
+	PreviousServer string
+	NextServer     string
 }
 
 type InitResponse struct {

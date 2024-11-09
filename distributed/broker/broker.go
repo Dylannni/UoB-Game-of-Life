@@ -11,8 +11,8 @@ import (
 )
 
 type Broker struct {
-	serverList []*rpc.Client // List of controller addresses
-	connectedNodes int 		 // number of connected node
+	serverList     []*rpc.Client // List of controller addresses
+	connectedNodes int           // number of connected node
 }
 
 type ServerAddress struct {
@@ -21,10 +21,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "52.91.168.65", Port: "8031"},
-	{Address: "34.227.20.32", Port: "8032"},
-	{Address: "34.207.173.200", Port: "8033"},
-	{Address: "23.20.33.9", Port: "8034"},
+	{Address: "54.205.187.254", Port: "8031"},
+	{Address: "54.205.156.108", Port: "8032"},
+	{Address: "107.23.213.173", Port: "8033"},
+	{Address: "18.234.56.191", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -71,21 +71,20 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		slice := req.World[startY:endY]
 
-		preNodeIndex := (i-1+b.connectedNodes)%b.connectedNodes
-		nextNodeIndex := (i+1+b.connectedNodes)%b.connectedNodes
+		preNodeIndex := (i - 1 + b.connectedNodes) % b.connectedNodes
+		nextNodeIndex := (i + 1 + b.connectedNodes) % b.connectedNodes
 
 		err := server.Call("GameOfLife.Init", stdstruct.InitRequest{
-			World: slice,
-			Height: endY - startY,
-			Threads: req.Threads,
-			PreviousServer: NodesList[preNodeIndex].Address+":"+NodesList[preNodeIndex].Port,
-			NextServer:     NodesList[nextNodeIndex].Address+":"+NodesList[nextNodeIndex].Port,
-			}, &stdstruct.InitResponse{})
+			World:          slice,
+			Height:         endY - startY,
+			Threads:        req.Threads,
+			PreviousServer: NodesList[preNodeIndex].Address + ":" + NodesList[preNodeIndex].Port,
+			NextServer:     NodesList[nextNodeIndex].Address + ":" + NodesList[nextNodeIndex].Port,
+		}, &stdstruct.InitResponse{})
 		if err != nil {
 			fmt.Println("Error init GameOfLife:", err)
 		}
 	}
-
 
 	for i, server := range b.serverList {
 		startY := i * sliceHeight
@@ -112,7 +111,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 		sliceReq := stdstruct.SliceRequest{
 			StartX: 0,
-			EndX: 	width,
+			EndX:   width,
 			StartY: startY,
 			EndY:   endY,
 			Slice:  slice,
