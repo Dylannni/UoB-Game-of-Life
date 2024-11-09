@@ -52,9 +52,11 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	// 这里不用互斥锁的原因是服务器在交换光环的过程中是阻塞的，不会修改世界的数据
 	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
-	for i, val := range s.world[0] {
-		haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
-	}
+	copy(haloLine, s.world[0])
+
+	// for i, val := range s.world[0] {
+	// 	haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
+	// }
 	res.HaloLine = haloLine
 	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
 	return
@@ -64,9 +66,11 @@ func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloRe
 func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	height := len(s.world)
 	haloLine := make([]byte, len(s.world[height-1]))
-	for i, val := range s.world[height-1] {
-		haloLine[i] = val
-	}
+	copy(haloLine, s.world[height-1])
+
+	// for i, val := range s.world[height-1] {
+	// 	haloLine[i] = val
+	// }
 	res.HaloLine = haloLine
 	s.lastLineSent <- true
 	return
@@ -148,22 +152,6 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 			} else if extendWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
 				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
 			}
-
-			// if extendWorld[globalY][globalX] == 255 {
-			// 	// Cell is alive
-			// 	if liveNeighbors < 2 || liveNeighbors > 3 {
-			// 		nextWorld[y][x] = 0 // Cell dies
-			// 	} else {
-			// 		nextWorld[y][x] = 255 // Cell stays alive
-			// 	}
-			// } else {
-			// 	// Cell is dead
-			// 	if liveNeighbors == 3 {
-			// 		nextWorld[y][x] = 255 // Cell becomes alive
-			// 	} else {
-			// 		nextWorld[y][x] = 0 // Cell stays dead
-			// 	}
-			// }
 		}
 	}
 	// return nextWorld
@@ -196,39 +184,18 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	bottomHalo := <-nextOut
 
 	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
+	// width := req.EndX - req.StartX
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendworld := attendHaloArea(height, req.Slice, topHalo, bottomHalo)
 
-	nextWorld := make([][]byte, height)
-	for i := range nextWorld {
-		nextWorld[i] = make([]byte, width)
-		copy(nextWorld[i], req.Slice[i])
-	}
-
-	// mergeWorld := make([][]byte, 0, height)
-
-	// tempWorld := make([]chan [][]byte, s.threads)
-	// for i := range tempWorld {
-	// 	tempWorld[i] = make(chan [][]byte)
+	// nextWorld := make([][]byte, height)
+	// for i := range nextWorld {
+	// 	nextWorld[i] = make([]byte, width)
+	// 	copy(nextWorld[i], req.Slice[i])
 	// }
 
 	heightPerThread := (height + s.threads - 1) / s.threads
-
-	// for i := 0; i < s.threads; i++ {
-	// 	start := i * heightPerThread
-	// 	end := start + heightPerThread
-	// 	if end > height {
-	// 		end = height
-	// 	}
-	// 	go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i])
-	// }
-
-	// flippedCellsCh := make([]chan []util.Cell, s.threads)
-	// for i := range flippedCellsCh {
-	// 	flippedCellsCh[i] = make(chan []util.Cell)
-	// }
 
 	flippedCellsCh := make([]chan []util.Cell, s.threads)
 	for i := range flippedCellsCh {
@@ -241,21 +208,16 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		if end > height {
 			end = height
 		}
-		go worker(start, end, 0, req.EndX, extendworld, nextWorld, flippedCellsCh[i])
+		// go worker(start, end, 0, req.EndX, extendworld, nextWorld, flippedCellsCh[i])
+		go worker(start, end, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
+
 	}
-	// go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1])
 
 	var flippedCells []util.Cell
 	for i := 0; i < s.threads; i++ {
 		pieces := <-flippedCellsCh[i]
 		flippedCells = append(flippedCells, pieces...)
 	}
-
-	// for i := 0; i < s.threads; i++ {
-	// 	pieces := <-tempWorld[i]
-	// 	mergeWorld = append(mergeWorld, pieces...)
-	// }
-
 	res.FlippedCells = flippedCells
 
 	for _, flippedCell := range flippedCells {
