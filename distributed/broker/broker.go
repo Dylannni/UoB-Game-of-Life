@@ -148,7 +148,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 
 func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
 	var sliceRes stdstruct.SliceResponse
-	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
+	err := server.Call("GameOfLife.NextTurn", sliceReq, &sliceRes)
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)

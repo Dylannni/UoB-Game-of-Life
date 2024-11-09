@@ -133,7 +133,6 @@ func distributor(p Params, c distributorChannels) {
 			}
 		default:
 		}
-
 	}
 
 	outputImage(c, p, world)
