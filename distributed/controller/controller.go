@@ -145,7 +145,7 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 			// Apply the Game of Life rules
 			if extendWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
 				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
-			} else if extendWorld[globalY][globalX] == 255 && liveNeighbors == 3 {
+			} else if extendWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
 				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
 			}
 
