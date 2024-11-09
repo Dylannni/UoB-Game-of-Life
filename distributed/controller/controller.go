@@ -3,20 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"net"
 	"net/rpc"
+	"os"
+
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
-type GameOfLife struct{
-	world 			[][]byte
-	height 			int
-	threads 		int
-	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
-	lastLineSent   	chan bool
-	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+type GameOfLife struct {
+	world          [][]byte
+	height         int
+	threads        int
+	firstLineSent  chan bool // 检测是否已经发送上下光环的通道
+	lastLineSent   chan bool
+	previousServer *rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     *rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
@@ -174,8 +175,8 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 	go getHalo(s.nextServer, true, nextOut)
 
 	// Wait for neigbour node to send the getHalo() request
-	<- s.firstLineSent
-	<- s.lastLineSent
+	<-s.firstLineSent
+	<-s.lastLineSent
 
 	topHalo := <-preOut
 	bottomHalo := <-nextOut
@@ -199,18 +200,18 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		tempWorld[i] = make(chan [][]byte)
 	}
 
-	heightPerThread := (height + s.threads - 1) / s.threads 
+	heightPerThread := (height + s.threads - 1) / s.threads
 
-	for i := 0; i < s.threads-1; i++ {
+	for i := 0; i < s.threads; i++ {
 		start := i * heightPerThread
 		end := start + heightPerThread
 		if end > height {
 			end = height
 		}
-		go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i]) 
+		go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i])
 	}
-	go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1]) 
-	
+	// go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1])
+
 	for i := 0; i < s.threads; i++ {
 		pieces := <-tempWorld[i]
 		mergeWorld = append(mergeWorld, pieces...)
