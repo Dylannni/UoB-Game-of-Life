@@ -2,7 +2,6 @@ package stdstruct
 
 import "uk.ac.bris.cs/gameoflife/client/util"
 
-
 type Params struct {
 	Turns       int
 	Threads     int
@@ -53,7 +52,8 @@ type SliceRequest struct {
 }
 
 type SliceResponse struct {
-	Slice [][]byte
+	Slice        [][]byte
+	FlippedCells []util.Cell
 }
 
 type HaloRequest struct {

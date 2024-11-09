@@ -7,6 +7,7 @@ import (
 	"net/rpc"
 	"os"
 
+	"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
@@ -123,7 +124,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Slice [][]byte) [][]byte {
+func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Slice [][]byte) []util.Cell {
 	height := endY - startY
 	width := endX - startX
 
@@ -133,6 +134,7 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 		copy(nextWorld[i], Slice[i])
 	}
 
+	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
@@ -141,29 +143,41 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, len(extendWorld), len(extendWorld[0]))
 			// Apply the Game of Life rules
-			if extendWorld[globalY][globalX] == 255 {
-				// Cell is alive
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					nextWorld[y][x] = 0 // Cell dies
-				} else {
-					nextWorld[y][x] = 255 // Cell stays alive
-				}
-			} else {
-				// Cell is dead
-				if liveNeighbors == 3 {
-					nextWorld[y][x] = 255 // Cell becomes alive
-				} else {
-					nextWorld[y][x] = 0 // Cell stays dead
-				}
+			if extendWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
+			} else if extendWorld[globalY][globalX] == 255 && liveNeighbors == 3 {
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
 			}
+
+			// if extendWorld[globalY][globalX] == 255 {
+			// 	// Cell is alive
+			// 	if liveNeighbors < 2 || liveNeighbors > 3 {
+			// 		nextWorld[y][x] = 0 // Cell dies
+			// 	} else {
+			// 		nextWorld[y][x] = 255 // Cell stays alive
+			// 	}
+			// } else {
+			// 	// Cell is dead
+			// 	if liveNeighbors == 3 {
+			// 		nextWorld[y][x] = 255 // Cell becomes alive
+			// 	} else {
+			// 		nextWorld[y][x] = 0 // Cell stays dead
+			// 	}
+			// }
 		}
 	}
-	return nextWorld
+	// return nextWorld
+	return flippedCells
 }
 
-func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, tempWorld chan<- [][]byte) {
+// func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, tempWorld chan<- [][]byte) {
+// 	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
+// 	tempWorld <- worldPart
+// }
+
+func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
 	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
-	tempWorld <- worldPart
+	flippedCellsCh <- worldPart
 }
 
 func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
@@ -193,14 +207,33 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		copy(nextWorld[i], req.Slice[i])
 	}
 
-	mergeWorld := make([][]byte, 0, height)
+	// mergeWorld := make([][]byte, 0, height)
 
-	tempWorld := make([]chan [][]byte, s.threads)
-	for i := range tempWorld {
-		tempWorld[i] = make(chan [][]byte)
-	}
+	// tempWorld := make([]chan [][]byte, s.threads)
+	// for i := range tempWorld {
+	// 	tempWorld[i] = make(chan [][]byte)
+	// }
 
 	heightPerThread := (height + s.threads - 1) / s.threads
+
+	// for i := 0; i < s.threads; i++ {
+	// 	start := i * heightPerThread
+	// 	end := start + heightPerThread
+	// 	if end > height {
+	// 		end = height
+	// 	}
+	// 	go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i])
+	// }
+
+	// flippedCellsCh := make([]chan []util.Cell, s.threads)
+	// for i := range flippedCellsCh {
+	// 	flippedCellsCh[i] = make(chan []util.Cell)
+	// }
+
+	flippedCellsCh := make([]chan []util.Cell, s.threads)
+	for i := range flippedCellsCh {
+		flippedCellsCh[i] = make(chan []util.Cell)
+	}
 
 	for i := 0; i < s.threads; i++ {
 		start := i * heightPerThread
@@ -208,15 +241,32 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		if end > height {
 			end = height
 		}
-		go worker(start, end, 0, req.EndX, extendworld, nextWorld, tempWorld[i])
+		go worker(start, end, 0, req.EndX, extendworld, nextWorld, flippedCellsCh[i])
 	}
 	// go worker((s.threads-1)*heightPerThread, height, 0, req.EndX, extendworld, nextWorld, tempWorld[s.threads-1])
 
+	var flippedCells []util.Cell
 	for i := 0; i < s.threads; i++ {
-		pieces := <-tempWorld[i]
-		mergeWorld = append(mergeWorld, pieces...)
+		pieces := <-flippedCellsCh[i]
+		flippedCells = append(flippedCells, pieces...)
 	}
-	res.Slice = mergeWorld
+
+	// for i := 0; i < s.threads; i++ {
+	// 	pieces := <-tempWorld[i]
+	// 	mergeWorld = append(mergeWorld, pieces...)
+	// }
+
+	res.FlippedCells = flippedCells
+
+	for _, flippedCell := range flippedCells {
+		if s.world[flippedCell.Y][flippedCell.X] == 255 {
+			s.world[flippedCell.Y][flippedCell.X] = 0
+		} else {
+			s.world[flippedCell.Y][flippedCell.X] = 255
+		}
+	}
+
+	res.Slice = s.world
 	return nil
 }
 
