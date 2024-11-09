@@ -173,27 +173,30 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		copy(nextWorld[i], req.Slice[i])
 	}
 
-	heightPerThread := (height + s.threads - 1) / s.threads // For ceiling division
+	// heightPerThread := (height + s.threads - 1) / s.threads // For ceiling division
 
-	flippedCellsCh := make([]chan []util.Cell, s.threads)
-	for i := range flippedCellsCh {
-		flippedCellsCh[i] = make(chan []util.Cell)
-	}
+	// flippedCellsCh := make([]chan []util.Cell, s.threads)
+	// for i := range flippedCellsCh {
+	// 	flippedCellsCh[i] = make(chan []util.Cell)
+	// }
 
-	for i := 0; i < s.threads; i++ {
-		startY := i * heightPerThread
-		endY := startY + heightPerThread
-		if endY > height {
-			endY = height
-		}
-		go worker(startY, endY, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
-	}
+	// for i := 0; i < s.threads; i++ {
+	// 	startY := i * heightPerThread
+	// 	endY := startY + heightPerThread
+	// 	if endY > height {
+	// 		endY = height
+	// 	}
+	// 	go worker(startY, endY, 0, req.EndX, extendworld, s.world, flippedCellsCh[i])
+	// }
 
-	var flippedCells []util.Cell
-	for i := 0; i < s.threads; i++ {
-		pieces := <-flippedCellsCh[i]
-		flippedCells = append(flippedCells, pieces...)
-	}
+	// var flippedCells []util.Cell
+
+	flippedCells := calculateNextState(req.StartY, req.EndY, req.StartX, req.EndX, extendworld, nextWorld)
+
+	// for i := 0; i < s.threads; i++ {
+	// 	pieces := <-flippedCellsCh[i]
+	// 	flippedCells = append(flippedCells, pieces...)
+	// }
 	res.FlippedCells = flippedCells
 
 	for _, flippedCell := range flippedCells {
@@ -203,7 +206,6 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 			nextWorld[flippedCell.Y][flippedCell.X] = 255
 		}
 	}
-
 	res.Slice = nextWorld
 	return nil
 }
