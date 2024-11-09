@@ -20,10 +20,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "52.91.168.65", Port: "8031"},
-	{Address: "34.227.20.32", Port: "8032"},
-	{Address: "34.207.173.200", Port: "8033"},
-	{Address: "23.20.33.9", Port: "8034"},
+	{Address: "18.234.149.63", Port: "8031"},
+	{Address: "54.234.228.140", Port: "8032"},
+	{Address: "34.238.155.204", Port: "8033"},
+	{Address: "54.91.244.122", Port: "8034"},
 }
 
 func (b *Broker) initializeNodes() {
@@ -91,12 +91,12 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		}
 
 		sliceReq := stdstruct.SliceRequest{
-			StartX: 0,
-			EndX: 	width,
-			StartY: startY,
-			EndY:   endY,
-			Slice:  slice,
-			ExtendedSlice:  extendedSlice,
+			StartX:        0,
+			EndX:          width,
+			StartY:        startY,
+			EndY:          endY,
+			Slice:         slice,
+			ExtendedSlice: extendedSlice,
 		}
 		var sliceRes stdstruct.SliceResponse
 
