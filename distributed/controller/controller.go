@@ -68,9 +68,9 @@ func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []uti
 			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
 			if extendedWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
-				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: globalY})
 			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
-				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: globalY})
 			}
 
 		}
