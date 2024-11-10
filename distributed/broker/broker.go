@@ -21,17 +21,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-<<<<<<< HEAD
-	{Address: "54.175.97.226", Port: "8031"},
-	{Address: "18.207.209.137", Port: "8032"},
-	{Address: "52.91.163.20", Port: "8033"},
-	{Address: "23.20.22.38", Port: "8034"},
-=======
 	{Address: "18.234.222.243", Port: "8031"},
 	{Address: "54.173.116.75", Port: "8032"},
 	{Address: "34.230.14.53", Port: "8033"},
 	{Address: "52.23.214.229", Port: "8034"},
->>>>>>> 0b480ff (SDL + Parallel v0.7)
 }
 
 func (b *Broker) initializeNodes() {
