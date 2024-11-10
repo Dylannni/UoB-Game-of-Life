@@ -113,13 +113,21 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	}
 
 	// Merge flipped cells
-	var cellFlipped []util.Cell
+	var cellFlippeds []util.Cell
 	for i := 0; i < numServers; i++ {
-		cellFlipped = append(cellFlipped, <-flippedCellsCh[i]...)
+		cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
+	}
+
+	for _, flippedCell := range cellFlippeds {
+		if newWorld[flippedCell.Y][flippedCell.X] == 255 {
+			newWorld[flippedCell.Y][flippedCell.X] = 0
+		} else {
+			newWorld[flippedCell.Y][flippedCell.X] = 255
+		}
 	}
 
 	res.World = newWorld
-	res.FlippedCells = cellFlipped
+	res.FlippedCells = cellFlippeds
 	return nil
 }
 

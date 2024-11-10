@@ -68,9 +68,9 @@ func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []uti
 			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
 			if extendedWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: y})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: startY + y})
 			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: y})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: startY + y})
 			}
 		}
 	}
@@ -83,20 +83,21 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	extendedWorld := req.ExtendedSlice
 
 	// world slice without halo area, will return to broker after calculation
-	nextWorld := req.Slice
+	// nextWorld := req.Slice
+	// startY :=
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 	flippedCells := CalculateNextState(req.StartY, height, width, extendedWorld)
 	res.FlippedCells = flippedCells
-	for _, flippedCell := range flippedCells {
-		if nextWorld[flippedCell.Y][flippedCell.X] == 255 {
-			nextWorld[flippedCell.Y][flippedCell.X] = 0
-		} else {
-			nextWorld[flippedCell.Y][flippedCell.X] = 255
-		}
-	}
-	res.Slice = nextWorld
+	// for _, flippedCell := range flippedCells {
+	// 	if nextWorld[flippedCell.Y][flippedCell.X] == 255 {
+	// 		nextWorld[flippedCell.Y][flippedCell.X] = 0
+	// 	} else {
+	// 		nextWorld[flippedCell.Y][flippedCell.X] = 255
+	// 	}
+	// }
+	// res.Slice = nextWorld
 	return nil
 }
 
