@@ -3,20 +3,21 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"net"
 	"net/rpc"
+	"os"
 
+	"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
-type GameOfLife struct{
-	world 			[][]byte
-	height 			int
-	firstLineSent  	chan bool // 检测是否已经发送上下光环的通道
-	lastLineSent   	chan bool
-	previousServer 	*rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     	*rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+type GameOfLife struct {
+	world          [][]byte
+	height         int
+	firstLineSent  chan bool // 检测是否已经发送上下光环的通道
+	lastLineSent   chan bool
+	previousServer *rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
+	nextServer     *rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
@@ -121,17 +122,8 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
-
-	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := req.ExtendedSlice
-
-	// world slice without halo area, will return to broker after calculation 
-	nextWorld := req.Slice
-
-	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
-
+func calculateNextTurn(localStartY, height, width, globalstartY int, extendedWorld [][]byte) []util.Cell {
+	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
@@ -151,18 +143,32 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 }
 
 func worker(startY, height, width, globalstartY int, extendedWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
-	cellFlippeds := calculateNextState(startY, height, width, globalstartY, extendedWorld)
+	cellFlippeds := calculateNextTurn(startY, height, width, globalstartY, extendedWorld)
 	flippedCellsCh <- cellFlippeds
 }
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
+func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
-	// world slice with two extra row (one at the top and one at the bottom)
-	extendedWorld := req.ExtendedSlice
+	preOut := make(chan []byte)
+	nextOut := make(chan []byte)
+
+	go getHalo(s.previousServer, false, preOut)
+	go getHalo(s.nextServer, true, nextOut)
+
+	// Wait for neigbour node to send the getHalo() request
+	<-s.firstLineSent
+	<-s.lastLineSent
+
+	topHalo := <-preOut
+	bottomHalo := <-nextOut
+
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
-	globalstartY := req.StartY
 
+	// world slice with two extra row (one at the top and one at the bottom)
+	extendedWorld := attendHaloArea(height, s.world, topHalo, bottomHalo)
+
+	globalstartY := req.StartY
 	heightPerThread := height / req.Threads
 
 	var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
