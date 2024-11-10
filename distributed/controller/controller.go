@@ -56,16 +56,12 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
+func CalculateNextState(height, width int, extendedWorld [][]byte) [][]byte {
 
-	// world slice with two extra row (one at the top and one at the bottom)
-	currWorld := req.ExtendedSlice
-
-	// world slice without halo area, will return to broker after calculation 
-	nextWorld := req.Slice
-
-	height := req.EndY - req.StartY
-	width := req.EndX - req.StartX
+	newWorld := make([][]byte, height)
+	for i := range newWorld {
+		newWorld[i] = make([]byte, width)
+	}
 
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -74,25 +70,40 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 			globalY := y + 1
 			globalX := x
 			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(currWorld, globalY, globalX, len(currWorld), len(currWorld[0]))
+			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
-			if currWorld[globalY][globalX] == 255 {
+			if extendedWorld[globalY][globalX] == 255 {
 				// Cell is alive
 				if liveNeighbors < 2 || liveNeighbors > 3 {
-					nextWorld[y][x] = 0 // Cell dies
+					newWorld[y][x] = 0 // Cell dies
 				} else {
-					nextWorld[y][x] = 255 // Cell stays alive
+					newWorld[y][x] = 255 // Cell stays alive
 				}
 			} else {
 				// Cell is dead
 				if liveNeighbors == 3 {
-					nextWorld[y][x] = 255 // Cell becomes alive
+					newWorld[y][x] = 255 // Cell becomes alive
 				} else {
-					nextWorld[y][x] = 0 // Cell stays dead
+					newWorld[y][x] = 0 // Cell stays dead
 				}
 			}
 		}
 	}
+	return newWorld
+}
+
+func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
+
+	// world slice with two extra row (one at the top and one at the bottom)
+	extendedWorld := req.ExtendedSlice
+
+	// world slice without halo area, will return to broker after calculation
+	// nextWorld := req.Slice
+
+	height := req.EndY - req.StartY
+	width := req.EndX - req.StartX
+	nextWorld := CalculateNextState(height, width, extendedWorld)
+
 	res.Slice = nextWorld
 	return nil
 }
