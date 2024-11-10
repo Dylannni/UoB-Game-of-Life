@@ -27,7 +27,8 @@ type GameRequest struct {
 }
 
 type GameResponse struct {
-	World [][]byte
+	World        [][]byte
+	FlippedCells []util.Cell
 }
 
 type SliceRequest struct {

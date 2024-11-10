@@ -72,7 +72,6 @@ func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []uti
 			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
 				flippedCells = append(flippedCells, util.Cell{X: x, Y: y})
 			}
-
 		}
 	}
 	return flippedCells

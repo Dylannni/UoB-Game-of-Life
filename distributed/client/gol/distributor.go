@@ -67,6 +67,11 @@ func distributor(p Params, c distributorChannels) {
 
 		world = gameRes.World
 		c.completedTurns = turn + 1
+
+		for _, flippedCell := range gameRes.FlippedCells {
+			c.events <- CellFlipped{turn, flippedCell}
+		}
+
 		c.events <- TurnComplete{CompletedTurns: c.completedTurns}
 
 		select {
