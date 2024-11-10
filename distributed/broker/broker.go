@@ -94,6 +94,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			EndX:          width,
 			StartY:        startY,
 			EndY:          endY,
+			Threads:       req.Threads,
 			ExtendedSlice: extendedSlice,
 		}
 		flippedCellCh := make(chan []util.Cell)
@@ -121,7 +122,6 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			newWorld[flippedCell.Y][flippedCell.X] = 255
 		}
 	}
-
 	res.World = newWorld
 	res.FlippedCells = cellFlippeds
 	return nil

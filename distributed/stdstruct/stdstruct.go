@@ -23,7 +23,8 @@ type RegisterResponse struct {
 }
 
 type GameRequest struct {
-	World [][]byte
+	World   [][]byte
+	Threads int
 }
 
 type GameResponse struct {
@@ -36,7 +37,7 @@ type SliceRequest struct {
 	EndX          int
 	StartY        int
 	EndY          int
-	Slice         [][]byte
+	Threads       int
 	ExtendedSlice [][]byte
 }
 
