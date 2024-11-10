@@ -57,29 +57,31 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func calculateNextState(startY, height, width int, extendedWorld [][]byte) []util.Cell {
+func calculateNextState(localStartY, height, width int, extendedWorld [][]byte) []util.Cell {
 	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
+		globalY := y + 1
 		for x := 0; x < width; x++ {
-			globalY := y + 1
+			actualY := localStartY + y
 			globalX := x
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
 			if extendedWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: startY + y})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: actualY})
 			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: startY + y})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: actualY})
 			}
 		}
 	}
 	return flippedCells
 }
 
-// func worker(startY, endY, width int, extendworld [][]byte, flippedCellsCh chan<- []util.Cell) {
-// 	flippedCellsCh <- calculateNextState(startY, endY, width, extendworld)
-// }
+func worker(startY, height, width int, extendedWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
+	cellFlippeds := calculateNextState(startY, height, width, extendedWorld)
+	flippedCellsCh <- cellFlippeds
+}
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
@@ -88,28 +90,35 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 
-	// heightPerThread := height / req.Threads
+	heightPerThread := height / req.Threads
 
-	// var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
-	// for i := 0; i < req.Threads; i++ {
-	// 	flippedCellCh := make(chan []util.Cell)
-	// 	flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-	// 	if i == req.Threads-1 {
-	// 		go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
-	// 	} else {
-	// 		go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
-	// 	}
-	// }
+	var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
+	for i := 0; i < req.Threads; i++ {
+		flippedCellCh := make(chan []util.Cell)
+		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 
-	// var mu sync.Mutex
-	// var cellFlippeds []util.Cell
-	// for i := 0; i < req.Threads; i++ {
-	// 	mu.Lock()
-	// 	cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
-	// 	mu.Unlock()
-	// }
+		var workerHeight int
+		startY := i * heightPerThread
+		if i == req.Threads-1 {
+			workerHeight = height - startY
+		} else {
+			workerHeight = heightPerThread
+		}
+		go worker(startY, workerHeight, width, extendedWorld, flippedCellCh)
 
-	cellFlippeds := calculateNextState(req.StartY, height, width, extendedWorld)
+		// if i == req.Threads-1 {
+		// 	go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
+		// } else {
+		// 	go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
+		// }
+	}
+
+	var cellFlippeds []util.Cell
+	for i := 0; i < req.Threads; i++ {
+		cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
+	}
+
+	// cellFlippeds := calculateNextState(req.StartY, height, width, extendedWorld)
 	res.FlippedCells = cellFlippeds
 	return nil
 }
