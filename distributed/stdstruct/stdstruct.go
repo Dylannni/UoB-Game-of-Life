@@ -32,6 +32,16 @@ type GameResponse struct {
 	FlippedCells []util.Cell
 }
 
+type InitRequest struct {
+	Height         int
+	World          [][]byte
+	PreviousServer string
+	NextServer     string
+}
+
+type InitResponse struct {
+}
+
 type SliceRequest struct {
 	StartX        int
 	EndX          int
@@ -44,4 +54,11 @@ type SliceRequest struct {
 type SliceResponse struct {
 	Slice        [][]byte
 	FlippedCells []util.Cell
+}
+
+type HaloRequest struct {
+}
+
+type HaloResponse struct {
+	HaloLine []byte
 }
