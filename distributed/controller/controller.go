@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/rpc"
 
+	"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
 )
 
@@ -56,40 +57,25 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func CalculateNextState(height, width int, extendedWorld [][]byte) [][]byte {
-
-	newWorld := make([][]byte, height)
-	for i := range newWorld {
-		newWorld[i] = make([]byte, width)
-	}
-
+func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []util.Cell {
+	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
-
 			globalY := y + 1
 			globalX := x
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
-			if extendedWorld[globalY][globalX] == 255 {
-				// Cell is alive
-				if liveNeighbors < 2 || liveNeighbors > 3 {
-					newWorld[y][x] = 0 // Cell dies
-				} else {
-					newWorld[y][x] = 255 // Cell stays alive
-				}
-			} else {
-				// Cell is dead
-				if liveNeighbors == 3 {
-					newWorld[y][x] = 255 // Cell becomes alive
-				} else {
-					newWorld[y][x] = 0 // Cell stays dead
-				}
+			if extendedWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
+			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
+				flippedCells = append(flippedCells, util.Cell{X: globalX, Y: startY + y})
 			}
+
 		}
 	}
-	return newWorld
+	return flippedCells
 }
 
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
@@ -98,12 +84,19 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	extendedWorld := req.ExtendedSlice
 
 	// world slice without halo area, will return to broker after calculation
-	// nextWorld := req.Slice
+	nextWorld := req.Slice
 
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
-	nextWorld := CalculateNextState(height, width, extendedWorld)
-
+	flippedCells := CalculateNextState(req.StartY, height, width, extendedWorld)
+	res.FlippedCells = flippedCells
+	for _, flippedCell := range flippedCells {
+		if nextWorld[flippedCell.Y][flippedCell.X] == 255 {
+			nextWorld[flippedCell.Y][flippedCell.X] = 0
+		} else {
+			nextWorld[flippedCell.Y][flippedCell.X] = 255
+		}
+	}
 	res.Slice = nextWorld
 	return nil
 }

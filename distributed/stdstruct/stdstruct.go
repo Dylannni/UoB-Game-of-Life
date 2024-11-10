@@ -1,8 +1,6 @@
 package stdstruct
 
-type Cell struct {
-	X, Y int
-}
+import "uk.ac.bris.cs/gameoflife/client/util"
 
 type Params struct {
 	Turns       int
@@ -33,14 +31,15 @@ type GameResponse struct {
 }
 
 type SliceRequest struct {
-	StartX int
-	EndX   int
-	StartY int
-	EndY   int
-	Slice  [][]byte
-	ExtendedSlice  [][]byte
+	StartX        int
+	EndX          int
+	StartY        int
+	EndY          int
+	Slice         [][]byte
+	ExtendedSlice [][]byte
 }
 
 type SliceResponse struct {
-	Slice [][]byte
+	Slice        [][]byte
+	FlippedCells []util.Cell
 }
