@@ -57,29 +57,28 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func calculateNextState(localStartY, height, width int, extendedWorld [][]byte) []util.Cell {
+func calculateNextState(localStartY, height, width, globalstartY int, extendedWorld [][]byte) []util.Cell {
 	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
-		globalY := y + 1
 		for x := 0; x < width; x++ {
-			actualY := localStartY + y
+			globalY := localStartY + y + 1
 			globalX := x
 			// Count the live neighbors
 			liveNeighbors := countLiveNeighbors(extendedWorld, globalY, globalX, len(extendedWorld), len(extendedWorld[0]))
 			// Apply the Game of Life rules
 			if extendedWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: actualY})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: globalstartY + localStartY + y})
 			} else if extendedWorld[globalY][globalX] == 0 && liveNeighbors == 3 {
-				flippedCells = append(flippedCells, util.Cell{X: x, Y: actualY})
+				flippedCells = append(flippedCells, util.Cell{X: x, Y: globalstartY + localStartY + y})
 			}
 		}
 	}
 	return flippedCells
 }
 
-func worker(startY, height, width int, extendedWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
-	cellFlippeds := calculateNextState(startY, height, width, extendedWorld)
+func worker(startY, height, width, globalstartY int, extendedWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
+	cellFlippeds := calculateNextState(startY, height, width, globalstartY, extendedWorld)
 	flippedCellsCh <- cellFlippeds
 }
 
@@ -89,6 +88,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	extendedWorld := req.ExtendedSlice
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
+	globalstartY := req.StartY
 
 	heightPerThread := height / req.Threads
 
@@ -104,7 +104,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		} else {
 			workerHeight = heightPerThread
 		}
-		go worker(startY, workerHeight, width, extendedWorld, flippedCellCh)
+		go worker(startY, workerHeight, width, globalstartY, extendedWorld, flippedCellCh)
 
 		// if i == req.Threads-1 {
 		// 	go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
