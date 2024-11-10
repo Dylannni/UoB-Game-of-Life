@@ -62,7 +62,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	width := len(req.World[0])
 	sliceHeight := height / numServers
 
-	var outChannels []chan [][]byte
+	// var outChannels []chan [][]byte
 	var flippedCellsCh []chan []util.Cell // list of flipped cells that yet to merge
 
 	for i, server := range b.serverList {
@@ -99,17 +99,24 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			Slice:         slice,
 			ExtendedSlice: extendedSlice,
 		}
-		outChannel := make(chan [][]byte)
+		// outChannel := make(chan [][]byte)
 		flippedCellCh := make(chan []util.Cell)
-		outChannels = append(outChannels, outChannel)
+		// outChannels = append(outChannels, outChannel)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-		go runAWSnode(server, sliceReq, outChannel, flippedCellCh)
+		go runAWSnode(server, sliceReq, flippedCellCh)
 	}
 
-	// Merge results
-	newWorld := make([][]byte, 0, height)
-	for i := 0; i < numServers; i++ {
-		newWorld = append(newWorld, <-outChannels[i]...)
+	// // Merge results
+	// newWorld := make([][]byte, 0, height)
+	// for i := 0; i < numServers; i++ {
+	// 	newWorld = append(newWorld, <-outChannels[i]...)
+	// }
+
+	// newWorld := req.World
+	newWorld := make([][]byte, height)
+	for i := range newWorld {
+		newWorld[i] = make([]byte, width)
+		copy(newWorld[i], req.World[i])
 	}
 
 	// Merge flipped cells
@@ -131,14 +138,13 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	return nil
 }
 
-func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
+func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, flippedCellCh chan<- []util.Cell) {
 	var sliceRes stdstruct.SliceResponse
 	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)
 	}
-	out <- sliceRes.Slice
 	flippedCellCh <- sliceRes.FlippedCells
 }
 
