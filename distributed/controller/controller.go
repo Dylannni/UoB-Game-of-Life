@@ -91,7 +91,7 @@ func getHalo(server *rpc.Client, isFirstLine bool, out chan []byte) {
 //
 // Returns:
 //   - The number of live neighboring cells.
-func countLiveNeighbors(world [][]byte, row, col, cols int) int {
+func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	neighbors := [8][2]int{
 		{-1, -1}, {-1, 0}, {-1, 1}, // Top-left, Top, Top-right
 		{0, -1}, {0, 1}, // Left, Right
@@ -101,9 +101,15 @@ func countLiveNeighbors(world [][]byte, row, col, cols int) int {
 	liveNeighbors := 0
 	for _, n := range neighbors {
 		// Ensures the world wraps around at the edges (i.e. torus-like world)
-		// newRow := (row + n[0] + rows) % rows
-		newRow := row + n[0]
+		newRow := (row + n[0] + rows) % rows
 		newCol := (col + n[1] + cols) % cols
+
+		// Example: At a 5x5 world, if the current cell is at (0,0) and the neighbor is {-1, -1} (Top-left),
+		// the newRow and newCol would be calculated as:
+		// newRow = (0 + (-1) + 5) % 5 = 4  (wraps around to the bottom row)
+		// newCol = (0 + (-1) + 5) % 5 = 4  (wraps around to the rightmost column)
+		// So, the Top-left neighbor of (0, 0) would be (4, 4), wrapping around from the bottom-right.
+
 		if world[newRow][newCol] == 255 {
 			liveNeighbors++
 		}
@@ -128,7 +134,8 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 			globalY := y + 1 // because extendWorld have one extra halo line on the top
 			globalX := x
 			// Count the live neighbors
-			liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, width)
+			// liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, height, width)
+			liveNeighbors := countLiveNeighbors(extendWorld, globalY, globalX, len(extendWorld), len(extendWorld[0]))
 			// Apply the Game of Life rules
 			if extendWorld[globalY][globalX] == 255 && (liveNeighbors < 2 || liveNeighbors > 3) {
 				flippedCells = append(flippedCells, util.Cell{X: x, Y: startY + y})
@@ -141,10 +148,10 @@ func calculateNextState(startY, endY, startX, endX int, extendWorld [][]byte, Sl
 	return flippedCells
 }
 
-func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
-	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
-	flippedCellsCh <- worldPart
-}
+// func worker(startY, endY, startX, endX int, extendworld [][]byte, nextWorld [][]byte, flippedCellsCh chan<- []util.Cell) {
+// 	worldPart := calculateNextState(startY, endY, startX, endX, extendworld, nextWorld)
+// 	flippedCellsCh <- worldPart
+// }
 
 func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
