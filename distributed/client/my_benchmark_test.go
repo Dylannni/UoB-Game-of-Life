@@ -8,7 +8,7 @@ import (
 	"uk.ac.bris.cs/gameoflife/client/gol"
 )
 
-const benchLength = 3
+const benchLength = 2
 
 func BenchmarkGol(b *testing.B) {
 	for threads := 1; threads <= 16; threads++ {
