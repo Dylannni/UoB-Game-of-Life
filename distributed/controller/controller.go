@@ -57,7 +57,7 @@ func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	return liveNeighbors
 }
 
-func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []util.Cell {
+func calculateNextState(startY, height, width int, extendedWorld [][]byte) []util.Cell {
 	var flippedCells []util.Cell
 	// Iterate over each cell in the world
 	for y := 0; y < height; y++ {
@@ -77,14 +77,37 @@ func CalculateNextState(startY, height, width int, extendedWorld [][]byte) []uti
 	return flippedCells
 }
 
+func worker(startY, endY, width int, extendworld [][]byte, flippedCellsCh chan<- []util.Cell) {
+	flippedCellsCh <- calculateNextState(startY, endY, width, extendworld)
+}
+
 func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceResponse) (err error) {
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendedWorld := req.ExtendedSlice
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
-	flippedCells := CalculateNextState(req.StartY, height, width, extendedWorld)
-	res.FlippedCells = flippedCells
+
+	heightPerThread := height / req.Threads
+
+	var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
+	for i := 0; i < req.Threads-1; i++ {
+		flippedCellCh := make(chan []util.Cell)
+		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
+		if i == req.Threads-1 {
+			go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
+		} else {
+			go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
+		}
+	}
+
+	var cellFlippeds []util.Cell
+	for i := 0; i < req.Threads; i++ {
+		cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
+	}
+
+	// cellFlippeds := CalculateNextState(req.StartY, height, width, extendedWorld)
+	res.FlippedCells = cellFlippeds
 	return nil
 }
 
