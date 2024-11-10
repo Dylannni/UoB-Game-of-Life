@@ -81,23 +81,10 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 
 	// world slice with two extra row (one at the top and one at the bottom)
 	extendedWorld := req.ExtendedSlice
-
-	// world slice without halo area, will return to broker after calculation
-	// nextWorld := req.Slice
-	// startY :=
-
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 	flippedCells := CalculateNextState(req.StartY, height, width, extendedWorld)
 	res.FlippedCells = flippedCells
-	// for _, flippedCell := range flippedCells {
-	// 	if nextWorld[flippedCell.Y][flippedCell.X] == 255 {
-	// 		nextWorld[flippedCell.Y][flippedCell.X] = 0
-	// 	} else {
-	// 		nextWorld[flippedCell.Y][flippedCell.X] = 255
-	// 	}
-	// }
-	// res.Slice = nextWorld
 	return nil
 }
 

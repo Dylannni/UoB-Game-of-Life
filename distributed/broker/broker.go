@@ -62,11 +62,9 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	width := len(req.World[0])
 	sliceHeight := height / numServers
 
-	// var outChannels []chan [][]byte
 	var flippedCellsCh []chan []util.Cell // list of flipped cells that yet to merge
 
 	for i, server := range b.serverList {
-
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
 
@@ -96,28 +94,19 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			EndX:          width,
 			StartY:        startY,
 			EndY:          endY,
-			Slice:         slice,
 			ExtendedSlice: extendedSlice,
 		}
-		// outChannel := make(chan [][]byte)
 		flippedCellCh := make(chan []util.Cell)
-		// outChannels = append(outChannels, outChannel)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 		go runAWSnode(server, sliceReq, flippedCellCh)
 	}
 
-	// // Merge results
-	// newWorld := make([][]byte, 0, height)
-	// for i := 0; i < numServers; i++ {
-	// 	newWorld = append(newWorld, <-outChannels[i]...)
+	// newWorld := make([][]byte, height)
+	// for i := range newWorld {
+	// 	newWorld[i] = make([]byte, width)
+	// 	copy(newWorld[i], req.World[i])
 	// }
-
-	// newWorld := req.World
-	newWorld := make([][]byte, height)
-	for i := range newWorld {
-		newWorld[i] = make([]byte, width)
-		copy(newWorld[i], req.World[i])
-	}
+	newWorld := req.World // no potential race condition, no need to copy
 
 	// Merge flipped cells
 	var cellFlippeds []util.Cell
