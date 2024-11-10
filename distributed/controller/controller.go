@@ -91,7 +91,7 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	heightPerThread := height / req.Threads
 
 	var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
-	for i := 0; i < req.Threads-1; i++ {
+	for i := 0; i < req.Threads; i++ {
 		flippedCellCh := make(chan []util.Cell)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 		if i == req.Threads-1 {
