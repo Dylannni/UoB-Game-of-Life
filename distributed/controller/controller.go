@@ -183,8 +183,6 @@ func (s *GameOfLife) NextTurn(req *stdstruct.SliceRequest, res *stdstruct.SliceR
 		} else {
 			workerHeight = heightPerThread
 		}
-		fmt.Println("Threads Working !!!!!")
-		fmt.Println(i)
 		go worker(startY, workerHeight, width, globalstartY, extendedWorld, flippedCellCh)
 	}
 
