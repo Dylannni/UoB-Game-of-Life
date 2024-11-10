@@ -111,7 +111,6 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 			flippedCellCh := make(chan []util.Cell)
 			flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 			// flippedCellsCh[i] = flippedCellCh
-			worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
 			if i == req.Threads-1 {
 				worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
 			} else {
