@@ -15,7 +15,7 @@ type sdlState struct {
 	internalEvents []Event
 	eventsCond     *sync.Cond
 
-	internalKeyPress rune
+	internalKeyPress []rune
 	keyPressLock     sync.Mutex
 	keyPressCond     *sync.Cond
 }
@@ -31,7 +31,8 @@ type distributorChannels struct {
 
 func NewSDLState() *sdlState {
 	sdlstate := &sdlState{
-		internalEvents: make([]Event, 0),
+		internalEvents:   make([]Event, 0),
+		internalKeyPress: make([]rune, 0),
 	}
 	sdlstate.eventsCond = sync.NewCond(&sdlstate.eventsLock)
 	sdlstate.keyPressCond = sync.NewCond(&sdlstate.keyPressLock)
@@ -40,35 +41,36 @@ func NewSDLState() *sdlState {
 
 func (s *sdlState) AddEvent(event Event) {
 	s.eventsLock.Lock()
-	defer s.eventsLock.Unlock()
 	s.internalEvents = append(s.internalEvents, event)
 	s.eventsCond.Signal()
+	s.eventsLock.Unlock()
 }
 
 func (s *sdlState) GetEvent() Event {
 	s.eventsLock.Lock()
-	defer s.eventsLock.Unlock()
+
 	for len(s.internalEvents) == 0 {
 		s.eventsCond.Wait()
 	}
 	event := s.internalEvents[0]
 	s.internalEvents = s.internalEvents[1:]
+	s.eventsLock.Unlock()
 	return event
 }
 
 func (s *sdlState) SetKeyPress(key rune) {
 	s.keyPressLock.Lock()
-	s.internalKeyPress = key
+	s.internalKeyPress = append(s.internalKeyPress, key)
 	s.keyPressCond.Signal()
 	s.keyPressLock.Unlock()
 }
 
-func (s *sdlState) WaitForKeyPress() rune {
-	s.keyPressLock.Lock()
-	defer s.keyPressLock.Unlock()
-	s.keyPressCond.Wait()
-	return s.internalKeyPress
-}
+// func (s *sdlState) WaitForKeyPress() rune {
+// 	s.keyPressLock.Lock()
+// 	defer s.keyPressLock.Unlock()
+// 	s.keyPressCond.Wait()
+// 	return s.internalKeyPress
+// }
 
 // Mutex for synchronizing worker functions
 var mu sync.Mutex
