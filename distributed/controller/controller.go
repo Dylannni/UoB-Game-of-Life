@@ -104,21 +104,15 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		} else {
 			workerHeight = heightPerThread
 		}
+		fmt.Println("Threads Working !!!!!")
+		fmt.Println(i)
 		go worker(startY, workerHeight, width, globalstartY, extendedWorld, flippedCellCh)
-
-		// if i == req.Threads-1 {
-		// 	go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
-		// } else {
-		// 	go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
-		// }
 	}
 
 	var cellFlippeds []util.Cell
 	for i := 0; i < req.Threads; i++ {
 		cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
 	}
-
-	// cellFlippeds := calculateNextState(req.StartY, height, width, extendedWorld)
 	res.FlippedCells = cellFlippeds
 	return nil
 }
