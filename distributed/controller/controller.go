@@ -50,8 +50,9 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 
 func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	haloLine := make([]byte, len(s.world[0])) // create a list that have same length as first line of the world
-
-	copy(haloLine, s.world[0])
+	for i, val := range s.world[0] {
+		haloLine[i] = val
+	}
 	res.HaloLine = haloLine
 	s.firstLineSent <- true
 	return
@@ -60,7 +61,9 @@ func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloRe
 func (s *GameOfLife) GetLastLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
 	height := len(s.world)
 	haloLine := make([]byte, len(s.world[height-1]))
-	copy(haloLine, s.world[height-1])
+	for i, val := range s.world[height-1] {
+		haloLine[i] = val
+	}
 	res.HaloLine = haloLine
 	s.lastLineSent <- true
 	return
