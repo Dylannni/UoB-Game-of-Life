@@ -21,10 +21,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "98.81.254.164", Port: "8031"},
-	{Address: "35.173.244.251", Port: "8032"},
-	{Address: "54.82.113.89", Port: "8033"},
-	{Address: "54.157.37.183", Port: "8034"},
+	{Address: "54.175.97.226", Port: "8031"},
+	{Address: "18.207.209.137", Port: "8032"},
+	{Address: "52.91.163.20", Port: "8033"},
+	{Address: "23.20.22.38", Port: "8034"},
 }
 
 func (b *Broker) initializeNodes() {
