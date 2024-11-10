@@ -62,13 +62,10 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	width := len(req.World[0])
 	sliceHeight := height / numServers
 
-	results := make([][][]byte, numServers)
-	var flippedCellsCh []util.Cell // list of flipped cells that yet to merge
-	// var flippedCellsCh []chan []util.Cell
+	var outChannels []chan [][]byte
+	var flippedCellsCh []chan []util.Cell // list of flipped cells that yet to merge
 
-	errors := make([]error, numServers)
-
-	for i, client := range b.serverList {
+	for i, server := range b.serverList {
 
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
@@ -102,51 +99,40 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 			Slice:         slice,
 			ExtendedSlice: extendedSlice,
 		}
-		// outChannel := make(chan [][]byte)
-		// flippedCellCh := make(chan []util.Cell)
-		// outChannels = append(outChannels, outChannel)
-		// flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-		// go runAWSnode(server, sliceReq, outChannel, flippedCellCh)
-
-		var sliceRes stdstruct.SliceResponse
-
-		err := client.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
-		if err != nil {
-			fmt.Println("Error processing slice:", err)
-			errors[i] = err
-		}
-
-		results[i] = sliceRes.Slice
-		flippedCellsCh = append(flippedCellsCh, sliceRes.FlippedCells...)
+		outChannel := make(chan [][]byte)
+		flippedCellCh := make(chan []util.Cell)
+		outChannels = append(outChannels, outChannel)
+		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
+		go runAWSnode(server, sliceReq, outChannel, flippedCellCh)
 	}
 
 	// Merge results
 	newWorld := make([][]byte, 0, height)
 	for i := 0; i < numServers; i++ {
-		newWorld = append(newWorld, results[i]...)
+		newWorld = append(newWorld, <-outChannels[i]...)
 	}
 
-	// // // Merge flipped cells
-	// var cellFlippeds []util.Cell
-	// for i := 0; i < numServers; i++ {
-	// 	cellFlippeds = append(cellFlippeds, flippedCellsCh[i]...)
-	// }
+	// Merge flipped cells
+	var cellFlipped []util.Cell
+	for i := 0; i < numServers; i++ {
+		cellFlipped = append(cellFlipped, <-flippedCellsCh[i]...)
+	}
 
 	res.World = newWorld
-	res.FlippedCells = flippedCellsCh
+	res.FlippedCells = cellFlipped
 	return nil
 }
 
-// func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
-// 	var sliceRes stdstruct.SliceResponse
-// 	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
+func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, out chan<- [][]byte, flippedCellCh chan<- []util.Cell) {
+	var sliceRes stdstruct.SliceResponse
+	err := server.Call("GameOfLife.CalculateNextTurn", sliceReq, &sliceRes)
 
-// 	if err != nil {
-// 		fmt.Println("Error processing slice:", err)
-// 	}
-// 	out <- sliceRes.Slice
-// 	flippedCellCh <- sliceRes.FlippedCells
-// }
+	if err != nil {
+		fmt.Println("Error processing slice:", err)
+	}
+	out <- sliceRes.Slice
+	flippedCellCh <- sliceRes.FlippedCells
+}
 
 func (b *Broker) ShutDown(_ *stdstruct.ShutRequest, _ *stdstruct.ShutResponse) (err error) {
 	fmt.Println("Shutting down the broker")
