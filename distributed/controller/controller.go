@@ -104,8 +104,6 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 		} else {
 			workerHeight = heightPerThread
 		}
-		fmt.Println("Threads Working !!!!!")
-		fmt.Println(i)
 		go worker(startY, workerHeight, width, globalstartY, extendedWorld, flippedCellCh)
 	}
 
