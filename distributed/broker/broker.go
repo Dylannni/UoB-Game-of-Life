@@ -22,10 +22,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "54.160.134.223", Port: "8031"},
-	{Address: "98.81.228.254", Port: "8032"},
-	{Address: "18.212.243.80", Port: "8033"},
-	{Address: "34.207.219.67", Port: "8034"},
+	{Address: "52.91.216.135", Port: "8031"},
+	{Address: "3.80.106.139", Port: "8032"},
+	{Address: "54.159.3.141", Port: "8033"},
+	{Address: "50.17.117.83", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -90,25 +90,6 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		startY := i * sliceHeight
 		endY := startY + sliceHeight
 
-		// slice := req.World[startY:endY]
-
-		// var extendedSlice [][]byte
-		// if startY == 0 {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[height-1]}, slice...)
-		// } else {
-		// 	// adding the last row of the last slice to the top
-		// 	extendedSlice = append([][]byte{req.World[startY-1]}, slice...)
-		// }
-
-		// if endY == height {
-		// 	// 最后一块切片，添加第一行作为 Ghost Cell
-		// 	extendedSlice = append(extendedSlice, req.World[0])
-		// } else {
-		// 	// adding the first row of next slice to the bottom
-		// 	extendedSlice = append(extendedSlice, req.World[endY])
-		// }
-
 		sliceReq := stdstruct.SliceRequest{
 			StartX:  0,
 			EndX:    width,
@@ -121,12 +102,6 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
 		go runAWSnode(server, sliceReq, flippedCellCh)
 	}
-
-	// newWorld := make([][]byte, height)
-	// for i := range newWorld {
-	// 	newWorld[i] = make([]byte, width)
-	// 	copy(newWorld[i], req.World[i])
-	// }
 	newWorld := req.World // no potential race condition, no need to copy
 
 	// Merge flipped cells
