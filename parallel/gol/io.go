@@ -34,8 +34,6 @@ type shareIOState struct {
 	input      uint8
 	inputCond  *sync.Cond
 	inputReady bool
-
-	//outputBuffer [][]uint8
 }
 
 // ioState is the internal ioState of the io goroutine.
@@ -75,11 +73,8 @@ const (
 func (io *ioState) writePgmImage() {
 	_ = os.Mkdir("out", os.ModePerm)
 
-	// Request a filename from the distributor.
-	//filename := <-io.channels.filename
 	io.shared.filenameLock.Lock()
 	for !io.shared.filenameReady {
-		//fmt.Println("writePgmImage: Waiting for filename...")
 		io.shared.filenameCond.Wait()
 	}
 	filename := io.shared.filename
@@ -108,24 +103,17 @@ func (io *ioState) writePgmImage() {
 	// Write pixel data for each position in the world.
 	for y := 0; y < io.params.ImageHeight; y++ {
 		for x := 0; x < io.params.ImageWidth; x++ {
-			//val := <-io.channels.output
-			//if val != 0 {
-			//	fmt.Println(x, y)
-			//}
 			io.shared.outputLock.Lock()
 			for !io.shared.outputReady {
-				//fmt.Println("writePgmImage: Waiting for output data...")
 				io.shared.outputCond.Wait() // wait for output update
 			}
 			world[y][x] = io.shared.output
 			io.shared.outputReady = false
 			io.shared.outputCond.Signal() // tell other goroutine is finished
-			//fmt.Printf("writePgmImage: Received output data at (%d, %d): %d\n", x, y, world[y][x])
 			io.shared.outputLock.Unlock()
 		}
 	}
 
-	//fmt.Println("writePgmImage: Writing image data to file")
 	for y := 0; y < io.params.ImageHeight; y++ {
 		for x := 0; x < io.params.ImageWidth; x++ {
 			_, ioError = file.Write([]byte{world[y][x]})
@@ -142,16 +130,12 @@ func (io *ioState) writePgmImage() {
 // readPgmImage opens a pgm file and sends its data as an array of bytes.
 func (io *ioState) readPgmImage() {
 
-	// Request a filename from the distributor.
-	//filename := <-io.channels.filename
 	io.shared.filenameLock.Lock()
 	for !io.shared.filenameReady {
-		//fmt.Println("readPgmImage: Waiting for filename...")
 		io.shared.filenameCond.Wait()
 	}
 	filename := io.shared.filename
 	io.shared.filenameReady = false
-	//io.shared.filenameCond.Signal()
 	io.shared.filenameLock.Unlock()
 
 	data, ioError := os.ReadFile("images/" + filename + ".pgm")
@@ -181,12 +165,10 @@ func (io *ioState) readPgmImage() {
 	image := []byte(fields[4])
 
 	for _, b := range image {
-		//io.channels.input <- b
 		io.shared.inputLock.Lock()
 		io.shared.input = b
-		io.shared.inputReady = true  // set that data is ready
-		io.shared.inputCond.Signal() // tell other
-		//fmt.Printf("readPgmImage: Sent input data: %d\n", b)
+		io.shared.inputReady = true // set that data is ready
+		io.shared.inputCond.Signal()
 		for io.shared.inputReady {
 			io.shared.inputCond.Wait() // Wait for the consumer to reset inputReady to false
 		}
@@ -206,29 +188,20 @@ func startIo(p Params, shared *shareIOState) {
 	for {
 		io.shared.commandLock.Lock()
 		for !io.shared.commandReady {
-			//fmt.Println("startIo: Waiting for command...")
 			io.shared.commandCond.Wait()
 		}
 		command := io.shared.command
-		//fmt.Println("startIo: Received command:", command)
 		io.shared.commandReady = false
 		io.shared.commandLock.Unlock()
-		// Block and wait for requests from the distributor
 		switch command {
 		case ioInput:
-			//fmt.Println("startIo: Executing ioInput command")
 			io.readPgmImage()
-			//fmt.Println("startIo:readimage done")
 
 		case ioOutput:
-			//fmt.Println("startIo: Executing output command")
 			io.writePgmImage()
-			//fmt.Println("startIo: write image done")
 		case ioCheckIdle:
-			//io.channels.idle <- true
 			io.shared.idleLock.Lock()
 			io.shared.idle = true
-			//fmt.Println("startIo: Idle state set to true")
 			io.shared.idleCond.Signal()
 			io.shared.idleLock.Unlock()
 		}
