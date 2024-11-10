@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"sync"
 
 	"net"
 	"net/rpc"
@@ -89,46 +88,28 @@ func (s *GameOfLife) CalculateNextTurn(req *stdstruct.SliceRequest, res *stdstru
 	height := req.EndY - req.StartY
 	width := req.EndX - req.StartX
 
-	heightPerThread := height / req.Threads
+	// heightPerThread := height / req.Threads
 
-	var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
-	for i := 0; i < req.Threads; i++ {
-		flippedCellCh := make(chan []util.Cell)
-		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-		if i == req.Threads-1 {
-			go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
-		} else {
-			go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
-		}
-	}
-
-	// var wg sync.WaitGroup
-
+	// var flippedCellsCh []chan []util.Cell // list of flipped cells channel that yet to merge
 	// for i := 0; i < req.Threads; i++ {
-	// 	wg.Add(1)
-	// 	go func(i int) {
-	// 		defer wg.Done()
-	// 		flippedCellCh := make(chan []util.Cell)
-	// 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-	// 		// flippedCellsCh[i] = flippedCellCh
-	// 		if i == req.Threads-1 {
-	// 			worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
-	// 		} else {
-	// 			worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
-	// 		}
-	// 	}(i)
+	// 	flippedCellCh := make(chan []util.Cell)
+	// 	flippedCellsCh = append(flippedCellsCh, flippedCellCh)
+	// 	if i == req.Threads-1 {
+	// 		go worker((req.Threads-1)*heightPerThread, height, width, extendedWorld, flippedCellCh)
+	// 	} else {
+	// 		go worker(i*heightPerThread, (i+1)*heightPerThread, width, extendedWorld, flippedCellCh)
+	// 	}
 	// }
 
-	// wg.Wait()
-	var mu sync.Mutex
-	var cellFlippeds []util.Cell
-	for i := 0; i < req.Threads; i++ {
-		mu.Lock()
-		cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
-		mu.Unlock()
-	}
+	// var mu sync.Mutex
+	// var cellFlippeds []util.Cell
+	// for i := 0; i < req.Threads; i++ {
+	// 	mu.Lock()
+	// 	cellFlippeds = append(cellFlippeds, <-flippedCellsCh[i]...)
+	// 	mu.Unlock()
+	// }
 
-	// cellFlippeds := CalculateNextState(req.StartY, height, width, extendedWorld)
+	cellFlippeds := calculateNextState(req.StartY, height, width, extendedWorld)
 	res.FlippedCells = cellFlippeds
 	return nil
 }
