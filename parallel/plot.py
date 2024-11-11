@@ -5,8 +5,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # 读取两个 CSV 数据，分别为 Channel 版本和 Memory Sharing 版本。
-channel_data = pd.read_csv('channel_version.csv', header=0, names=['name', 'time', 'range'])
-memory_sharing_data = pd.read_csv('memory_sharing_version.csv', header=0, names=['name', 'time', 'range'])
+# channel_data = pd.read_csv('channel_version.csv', header=0, names=['name', 'time', 'range'])
+channel_data = pd.read_csv('chan2.csv', header=0, names=['name', 'time', 'range'])
+
+# memory_sharing_data = pd.read_csv('memory_sharing_version.csv', header=0, names=['name', 'time', 'range'])
+memory_sharing_data = pd.read_csv('ms2.csv', header=0, names=['name', 'time', 'range'])
+
 
 # 添加 'group' 列，以区分 Channel 和 Memory Sharing 版本的数据。
 channel_data['group'] = 'Channel'
