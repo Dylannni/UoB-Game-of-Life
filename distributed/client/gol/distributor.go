@@ -129,7 +129,7 @@ func distributor(p Params, c distributorChannels) {
 
 	outputImage(c, p, world)
 
-	// TODO: Report the final state using FinalTurnCompleteEvent.
+	// Report the final state using FinalTurnCompleteEvent.
 	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
