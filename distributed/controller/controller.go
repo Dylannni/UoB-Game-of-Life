@@ -20,6 +20,11 @@ type GameOfLife struct {
 	nextServer     *rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
 }
 
+func (s *GameOfLife) CheckWorking(_ struct{}, response *bool) error {
+	*response = true
+	return nil
+}
+
 func (s *GameOfLife) Init(req stdstruct.InitRequest, _ *stdstruct.InitResponse) (err error) {
 	s.previousServer, err = rpc.Dial("tcp", req.PreviousServer)
 	if err != nil {

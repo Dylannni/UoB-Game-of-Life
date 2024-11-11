@@ -6,6 +6,9 @@ import (
 	"net"
 	"net/rpc"
 	"os"
+	"time"
+
+	"sync"
 
 	"uk.ac.bris.cs/gameoflife/client/util"
 	"uk.ac.bris.cs/gameoflife/stdstruct"
@@ -14,6 +17,7 @@ import (
 type Broker struct {
 	serverList     []*rpc.Client // List of controller addresses
 	connectedNodes int           // number of connected node
+	serverMutex    sync.Mutex
 }
 
 type ServerAddress struct {
@@ -48,6 +52,42 @@ func (b *Broker) initNodes() {
 			}
 		}
 	}
+}
+
+func (b *Broker) startCheckWorking(worker *rpc.Client, address string) {
+	for {
+		var response bool
+		err := worker.Call("GameOfLife.CheckWorking", struct{}{}, &response)
+		if err != nil || !response {
+			fmt.Println("Server failed:", address)
+			b.handleFailure(worker)
+			return
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+// Handle server failure
+func (b *Broker) handleFailure(failedWorker *rpc.Client) {
+	b.serverMutex.Lock()
+	defer b.serverMutex.Unlock()
+
+	// Remove the failed server from the serverList
+	index := -1
+	for i, s := range b.serverList {
+		if s == failedWorker {
+			index = i
+			break
+		}
+	}
+	if index != -1 {
+		b.serverList = append(b.serverList[:index], b.serverList[index+1:]...)
+		b.connectedNodes--
+	}
+
+	fmt.Println("Reassigning tasks due to server failure")
+	// Reassign tasks to remaining servers
+	// You can implement task redistribution logic here if needed
 }
 
 // RunGol distributes the game world to controllers and collects results
@@ -100,7 +140,7 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 		}
 		flippedCellCh := make(chan []util.Cell)
 		flippedCellsCh = append(flippedCellsCh, flippedCellCh)
-		go runAWSnode(server, sliceReq, flippedCellCh)
+		go b.runAWSnode(server, sliceReq, flippedCellCh)
 	}
 	newWorld := req.World // no potential race condition, no need to copy
 
@@ -122,12 +162,13 @@ func (b *Broker) RunGol(req *stdstruct.GameRequest, res *stdstruct.GameResponse)
 	return nil
 }
 
-func runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, flippedCellCh chan<- []util.Cell) {
+func (b *Broker) runAWSnode(server *rpc.Client, sliceReq stdstruct.SliceRequest, flippedCellCh chan<- []util.Cell) {
 	var sliceRes stdstruct.SliceResponse
 	err := server.Call("GameOfLife.NextTurn", sliceReq, &sliceRes)
 
 	if err != nil {
 		fmt.Println("Error processing slice:", err)
+		b.handleFailure(server)
 	}
 	flippedCellCh <- sliceRes.FlippedCells
 }
