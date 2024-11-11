@@ -26,14 +26,6 @@ func calculateAliveCells(p Params, world [][]byte) []util.Cell {
 	return aliveCells
 }
 
-// countLiveNeighbors calculates the number of live neighbors for a given cell.
-// Parameters:
-//   - world: A 2D byte array representing the state of the world, where 255 indicates a live cell, and 0 indicates a dead cell.
-//   - row(globalY), col(globalX): The row and column of the current cell to calculate neighbors for.
-//   - rows(p.ImageHeight), cols(p.ImageWidth): The total number of rows and columns in the world, used for boundary handling.
-//
-// Returns:
-//   - The number of live neighboring cells.
 func countLiveNeighbors(world [][]byte, row, col, rows, cols int) int {
 	neighbors := [8][2]int{
 		{-1, -1}, {-1, 0}, {-1, 1}, // Top-left, Top, Top-right

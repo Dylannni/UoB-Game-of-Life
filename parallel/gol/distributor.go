@@ -43,7 +43,7 @@ func outputImage(c distributorChannels, p Params, world [][]byte) {
 // distributor divides the work between workers and interacts with other goroutines.
 func distributor(p Params, c distributorChannels) {
 
-	// TODO: Create a 2D slice to store the world.
+	// Create a 2D slice to store the world.
 	world := initWorld(p.ImageHeight, p.ImageWidth)
 
 	ticker := time.NewTicker(2 * time.Second)
@@ -64,7 +64,7 @@ func distributor(p Params, c distributorChannels) {
 	turn := 0
 	c.events <- StateChange{turn, Executing}
 
-	// TODO: Execute all turns of the Game of Life.
+	// Execute all turns of the Game of Life.
 	for turn = 0; turn < p.Turns; turn++ {
 		c.completedTurns = turn + 1
 
@@ -140,7 +140,7 @@ func distributor(p Params, c distributorChannels) {
 
 	outputImage(c, p, world)
 
-	// TODO: Report the final state using FinalTurnCompleteEvent.
+	// Report the final state using FinalTurnCompleteEvent.
 	c.events <- FinalTurnComplete{CompletedTurns: c.completedTurns, Alive: calculateAliveCells(p, world)}
 	// Make sure that the Io has finished any output before exiting.
 	c.ioCommand <- ioCheckIdle
