@@ -56,20 +56,6 @@ func (s *sdlState) GetEvent() Event {
 	return event
 }
 
-// func (s *sdlState) SetKeyPress(key rune) {
-// 	s.keyPressLock.Lock()
-// 	s.internalKeyPress = append(s.internalKeyPress, key)
-// 	s.keyPressCond.Signal()
-// 	s.keyPressLock.Unlock()
-// }
-
-// func (s *sdlState) WaitForKeyPress() rune {
-// 	s.keyPressLock.Lock()
-// 	defer s.keyPressLock.Unlock()
-// 	s.keyPressCond.Wait()
-// 	return s.internalKeyPress
-// }
-
 var mu sync.Mutex
 
 // tempWorld store each workers result
