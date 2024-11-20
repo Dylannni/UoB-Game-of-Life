@@ -44,6 +44,7 @@ func (b *Broker) initNodes() {
 				b.connectedNodes += 1
 				b.serverList = append(b.serverList, server)
 				fmt.Println("Connected to node:", address)
+				go b.startCheckWorking(server, address)
 			} else {
 				fmt.Println("Failed to connect to node:", address, "Error:", nodeErr)
 			}
@@ -86,6 +87,7 @@ func (b *Broker) handleFailure(failedWorker *rpc.Client) {
 	}
 
 	fmt.Println("Reassigning tasks due to server failure")
+	// TODO: Implement reassign logic here
 }
 
 // RunGol distributes the game world to controllers and collects results
