@@ -26,10 +26,10 @@ type ServerAddress struct {
 }
 
 var NodesList = [...]ServerAddress{
-	{Address: "52.91.216.135", Port: "8031"},
-	{Address: "3.80.106.139", Port: "8032"},
-	{Address: "54.159.3.141", Port: "8033"},
-	{Address: "50.17.117.83", Port: "8034"},
+	{Address: "98.81.202.53", Port: "8031"},
+	{Address: "54.234.123.7", Port: "8032"},
+	{Address: "52.207.230.147", Port: "8033"},
+	{Address: "54.164.9.141", Port: "8034"},
 }
 
 func (b *Broker) initNodes() {
@@ -86,8 +86,6 @@ func (b *Broker) handleFailure(failedWorker *rpc.Client) {
 	}
 
 	fmt.Println("Reassigning tasks due to server failure")
-	// Reassign tasks to remaining servers
-	// You can implement task redistribution logic here if needed
 }
 
 // RunGol distributes the game world to controllers and collects results

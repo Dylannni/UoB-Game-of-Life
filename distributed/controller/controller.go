@@ -14,10 +14,10 @@ import (
 type GameOfLife struct {
 	world          [][]byte
 	height         int
-	firstLineSent  chan bool // 检测是否已经发送上下光环的通道
+	firstLineSent  chan bool
 	lastLineSent   chan bool
-	previousServer *rpc.Client // 自己的上下光环服务器rpc，这里保存的是rpc客户端的pointer，
-	nextServer     *rpc.Client // 这样就不用每次获取光环时都需要连接服务器了
+	previousServer *rpc.Client
+	nextServer     *rpc.Client
 }
 
 func (s *GameOfLife) CheckWorking(_ struct{}, response *bool) error {
@@ -52,12 +52,12 @@ func attendHaloArea(height int, world [][]byte, topHalo, bottomHalo []byte) [][]
 }
 
 func (s *GameOfLife) GetFirstLine(_ stdstruct.HaloRequest, res *stdstruct.HaloResponse) (err error) {
-	haloLine := make([]byte, len(s.world[0])) // 创建一个长度和世界第一行相同的列表（其实这里直接用s.width会更好）
+	haloLine := make([]byte, len(s.world[0]))
 	for i, val := range s.world[0] {
-		haloLine[i] = val // 将世界第一行每个值复制进新的数组（这样即使世界被修改光环也肯定不会变）
+		haloLine[i] = val
 	}
 	res.HaloLine = haloLine
-	s.firstLineSent <- true // 在交换前向通道传递值，这样保证所有服务器都完成光环交换后再继续运行下回合
+	s.firstLineSent <- true
 	return
 }
 
